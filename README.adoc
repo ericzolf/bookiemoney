@@ -1,0 +1,35 @@
+= bookiemoney
+
+A simple bookkeeper tool for your money
+
+== Introduction
+
+The basic idea is that personal accouting or finance manager tools are either:
+
+- too complex for my needs
+- or fail on the complexity of the banking access, and ever changing access control
+- or aren't flexible enough when it comes to simply importing files
+
+To avoid all these issues, I'd like to be able to download files (CSV or otherwise) from my bank(s), put them in a folder, call a script and have a consolidated view, without having to care anymore about HBCI & Co.
+
+== Further requirements
+
+It's work in progress but my idea is to have:
+
+. all the exported files from a specific bank account consolidated first in a single file (either CSV or perhaps later some database)
+. making sure that all entries are in the right order
+. avoiding duplicates as two files might contain the same entries
+. recognizing if some entries are missing (the balance jumps between two entries) and entering "gap" entries to compensate
+
+In a 2nd step, I might think about consolidating all these bank specific files into one big database, recognizing and "linking" transfers between accounts.
+
+== See also
+
+I'm not sure how and when BookieMoney will ever become something usable, so you are probably better of looking at those more advanced banking projects:
+
+- http://skrooge.org[Skrooge]
+- https://gnucash.org/[GnuCash]
+- http://kmymoney.org/[KMyMoney]
+- http://www.grisbi.org[Grisbi]
+- http://homebank.free.fr[HomeBank]
+- https://www.aquamaniac.de/rdm/projects/aqbanking[AqBanking]
