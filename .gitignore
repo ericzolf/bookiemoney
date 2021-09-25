@@ -127,3 +127,10 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# vim temporary and backup files
+*.swp
+*~
+
+# own files, not meant for Git
+*[._]myown[._]*
