@@ -2,6 +2,7 @@
 
 import argparse
 import collections
+import csv
 import os
 import re
 import yaml
@@ -37,16 +38,18 @@ def read_input_statements(files_list, flavour):
         flavour_file = os.path.join(extension, flavour + '.yml')
         with open(flavour_file, mode='r') as yfd:
             flavour_config = yaml.safe_load(yfd)
-        #print(flavour_config)
+
+        # Workaround because fd.readline stays stuck at the EOF
+        file_size = os.path.getsize(file)
 
         # then we match the config line by line with the statement's content
         with open(file, mode='r', encoding=flavour_config['encoding']) as fd:
             file_dict = {'file': file}
-            for line in flavour_config['lines']:
-                if line['type'] == 'match':
-                    result = parse_match(fd, line)
-                elif line['type'] == 'csv':
-                    result = parse_csv(fd, line)
+            for cfg_line in flavour_config['lines']:
+                if cfg_line['type'] == 'match':
+                    result = parse_match(fd, cfg_line)
+                elif cfg_line['type'] == 'csv':
+                    result = parse_csv(fd, cfg_line, file_size)
                 if result:  # we consider each config line optional
                     # handling the presence of multiple accounts in the same
                     # file but differentiating them by name
@@ -65,7 +68,7 @@ def read_input_statements(files_list, flavour):
             else:
                 accounts[''].append(file_dict)
 
-    print(accounts)
+    print("DEBUG", accounts)
     return accounts
 
 
@@ -85,10 +88,53 @@ def parse_match(fd, cfg):
         return {}
 
 
-def parse_csv(fd, cfg):
+class LinesReader:
+    """
+    Wrapper around a file object providing lines until max_read
 
+    We need this wrapper because csv.DictReader resp. 'next()' blocks
+    the usage of fd.tell() which we need to step back
+    """
+    def __init__(self, fd, max_read=29613):
+        self.fd = fd
+        self.max_read = max_read
+    def __next__(self):
+        self.last_pos = self.fd.tell()
+        # Workaround because fd.readline stays stuck at the EOF
+        if self.last_pos >= self.max_read:
+            raise StopIteration
+        line = self.fd.readline()
+        return line
+    def __iter__(self):
+        return self
+    def close(self):
+        self.fd.seek(self.last_pos)
+
+
+def parse_csv(fd, cfg, max_read):
+
+    lines = []
     last_pos, next_line = skip_empty_lines(fd)
-    return {}
+    header_reader = csv.reader((next_line,), **cfg['dialect'])
+    for header in header_reader:
+        pass  # there is only one line
+    lines_reader = LinesReader(fd, max_read)
+    reader = csv.DictReader(lines_reader, header, **cfg['dialect'])
+    for row in reader:
+        if None in row or row[header[-1]] is None:
+            # the line didn't parse correctly, end of the csv...
+            lines_reader.close()
+            break
+        else:
+            lines.append(row)
+
+    if cfg.get('skip', False):
+        return {}
+
+    if cfg.get('reverse', False):
+        lines.reverse()
+
+    return {'lines': lines}
 
 
 def skip_empty_lines(fd):

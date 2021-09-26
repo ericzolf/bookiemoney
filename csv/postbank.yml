@@ -1,6 +1,8 @@
 ---
 name: postbank
 encoding: cp1252
+type: csv
+
 lines:
 - type: match
   pattern: "Umsatzauskunft;"
@@ -13,7 +15,7 @@ lines:
 - type: match
   pattern: "IBAN;(?P<account_id>.*);"
 - type: match
-  pattern: "Aktueller Kontostand;(?P<current_balance>.*) (?P<account_currency>.);"
+  pattern: "Aktueller Kontostand;(?P<current_balance_value>.*) (?P<account_currency>.);"
 - type: match
   pattern: "Summe der Umsätze in den nächsten 14 Tagen;(.*) (.);"
 - type: match
@@ -21,10 +23,30 @@ lines:
 - type: csv
 #Buchungsdatum;Umsatzart;Buchungsdetails;Auftraggeber;Empfänger;Betrag (€);
 #10.09.2021;Lastbuchung;Bezahlfunktion10.09.2021;Eric Lavarde;;-323,94 €;
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 3  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
   skip: true
 - type: match
   pattern: "gebuchte Umsätze;"
 - type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 3  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
 #Buchungsdatum;Wertstellung;Umsatzart;Buchungsdetails;Auftraggeber;Empfänger;Betrag (€);Saldo (€);
 #10.09.2021;10.09.2021;Kartenzahlung;Referenz VZ2109100057090809Mandat 160900Einreicher-ID DE37SCC00000040819CARREFOUR DAC VL//ILLZACH/FR2021-09-08T14:55:22Folgenr. 002 Verfalld. 2412;Eric Lavarde;V PAY;-25,40 €;16.312,50 €;
 ...
