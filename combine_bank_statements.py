@@ -35,7 +35,7 @@ def read_input_statements(files_list, flavour):
         extension = os.path.splitext(file)[1].lstrip('.')
 
         # we read accordingly the flavour's configuration file
-        flavour_file = os.path.join(extension, flavour + '.yml')
+        flavour_file = os.path.join('in', extension, flavour + '.yml')
         with open(flavour_file, mode='r') as yfd:
             flavour_config = yaml.safe_load(yfd)
 
