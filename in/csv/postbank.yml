@@ -47,6 +47,28 @@ lines:
     skipinitialspace: true
     strict: true
   reverse: true  # entries are sorted older dates last
-#Buchungsdatum;Wertstellung;Umsatzart;Buchungsdetails;Auftraggeber;Empfänger;Betrag (€);Saldo (€);
+  map:
+  - key: Buchungsdatum
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: Wertstellung
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Umsatzart
+    pattern: "(?P<transaction_type>.*)"
+  - key: Auftraggeber
+    pattern: "(?P<transaction_originator_name>.*)"
+  - key: Empfänger
+    pattern: "(?P<transaction_receiver_name>V PAY)"
+    and:
+    - key: Buchungsdetails
+      pattern: "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..)(?P<transaction_details>.*)"
+    xor:
+    - key: Buchungsdetails
+      pattern: "(?P<transaction_details>.*)"
+    - key: Empfänger
+      pattern: "(?P<transaction_receiver_name>.*)"
+  - key: Betrag (€)
+    pattern: "(?P<transaction_value>.*) (?P<transaction_currency>.)"
+  - key: Saldo (€)
+    pattern: "(?P<transaction_balance_value>.*) (?P<transaction_balance_currency>.)"
 #10.09.2021;10.09.2021;Kartenzahlung;Referenz VZ2109100057090809Mandat 160900Einreicher-ID DE37SCC00000040819CARREFOUR DAC VL//ILLZACH/FR2021-09-08T14:55:22Folgenr. 002 Verfalld. 2412;Eric Lavarde;V PAY;-25,40 €;16.312,50 €;
 ...

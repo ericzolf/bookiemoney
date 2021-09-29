@@ -126,6 +126,8 @@ def parse_csv(fd, cfg, max_read):
             lines_reader.close()
             break
         else:
+            if 'map' in cfg:
+                row |= map_fields(row, cfg['map'])
             lines.append(row)
 
     if cfg.get('skip', False):
@@ -136,6 +138,32 @@ def parse_csv(fd, cfg, max_read):
 
     return {'lines': lines}
 
+
+def map_fields(fields_dict, map_cfg):
+    """
+    recursive function to parse fields in a dictionary according to a mapping config
+    """
+    parsed_dict = {}
+    for line in map_cfg:
+        # try to match line with pattern
+        # the pattern field can be a single pattern or a list of such
+        if isinstance(line['pattern'], str):
+            patterns = (line['pattern'],)
+        else:  # we assume a list
+            patterns = line['pattern']
+        # the first matching pattern wins
+        for pattern in patterns:
+            result = re.fullmatch(pattern, fields_dict[line['key']])
+            if result:
+                break
+        if result:
+            parsed_dict |= result.groupdict()
+            if 'and' in line:
+                parsed_dict |= map_fields(fields_dict, line['and'])
+        elif 'xor' in line:  # exclusive or
+            parsed_dict |= map_fields(fields_dict, line['xor'])
+
+    return parsed_dict
 
 def skip_empty_lines(fd):
 
