@@ -158,10 +158,10 @@ def map_fields(fields_dict, map_cfg):
                 break
         if result:
             parsed_dict |= result.groupdict()
-            if 'and' in line:
-                parsed_dict |= map_fields(fields_dict, line['and'])
-        elif 'xor' in line:  # exclusive or
-            parsed_dict |= map_fields(fields_dict, line['xor'])
+            if 'then' in line:
+                parsed_dict |= map_fields(fields_dict, line['then'])
+        elif 'else' in line:  # exclusive or
+            parsed_dict |= map_fields(fields_dict, line['else'])
 
     return parsed_dict
 

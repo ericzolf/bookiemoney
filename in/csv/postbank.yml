@@ -58,12 +58,15 @@ lines:
     pattern: "(?P<transaction_originator_name>.*)"
   - key: Empfänger
     pattern: "(?P<transaction_receiver_name>V PAY)"
-    and:
+    then:
     - key: Buchungsdetails
       pattern: "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..)(?P<transaction_details>.*)"
-    xor:
+    else:
     - key: Buchungsdetails
-      pattern: "(?P<transaction_details>.*)"
+      pattern:
+      - "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*)(?P<transaction_city>.*)/(?P<transaction_country_code>..)(?P<transaction_details>.*)"
+      - "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*) (?P<transaction_details>.*)"
+      - "(?P<transaction_details>.*)"
     - key: Empfänger
       pattern: "(?P<transaction_receiver_name>.*)"
   - key: Betrag (€)
