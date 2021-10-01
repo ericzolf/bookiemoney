@@ -181,20 +181,22 @@ def clean_accounts(accounts, flavour_config):
             for file_key in file:
                 if file_key != 'lines':
                     file[file_key] = clean_value(file_key, file[file_key],
-                                                 flavour_config['locale'])
+                                                 flavour_config)
             for line in file['lines']:
                 for field in line:
                     line[field] = clean_value(field, line[field],
-                                              flavour_config['locale'])
+                                              flavour_config)
 
 
-def clean_value(key, value, locale):
+def clean_value(key, value, cfg):
     if key.endswith('_value'):
-        return babelnum.parse_decimal(value, locale=locale)
+        return babelnum.parse_decimal(value, locale=cfg['locale'])
     elif key.endswith('_currency'):
         return CURRENCY_MAP.get(value, value)
     elif key.endswith('_date'):
-        return babeldate.parse_date(value, locale=locale)
+        return babeldate.parse_date(value, locale=cfg['locale'])
+    elif key.endswith('_payment_type') and 'payment_types' in cfg:
+        return cfg['payment_types'].get(value, value)
 
     return value
 
