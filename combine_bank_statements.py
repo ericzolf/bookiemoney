@@ -1,11 +1,18 @@
 #!/usr/bin/python
 
 import argparse
+import babel.numbers as babelnum
+import babel.dates as babeldate
 import collections
 import csv
 import os
 import re
 import yaml
+
+
+CURRENCY_MAP = { babelnum.get_currency_symbol(x): x
+                 for x in babelnum.list_currencies()
+                 if x != babelnum.get_currency_symbol(x) }
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -68,7 +75,9 @@ def read_input_statements(files_list, flavour):
             else:
                 accounts[''].append(file_dict)
 
-    print("DEBUG", accounts)
+    clean_accounts(accounts, flavour_config)
+    print(yaml.dump(accounts))
+
     return accounts
 
 
@@ -164,6 +173,31 @@ def map_fields(fields_dict, map_cfg):
             parsed_dict |= map_fields(fields_dict, line['else'])
 
     return parsed_dict
+
+
+def clean_accounts(accounts, flavour_config):
+    for account_key in accounts:
+        for file in accounts[account_key]:
+            for file_key in file:
+                if file_key != 'lines':
+                    file[file_key] = clean_value(file_key, file[file_key],
+                                                 flavour_config['locale'])
+            for line in file['lines']:
+                for field in line:
+                    line[field] = clean_value(field, line[field],
+                                              flavour_config['locale'])
+
+
+def clean_value(key, value, locale):
+    if key.endswith('_value'):
+        return babelnum.parse_decimal(value, locale=locale)
+    elif key.endswith('_currency'):
+        return CURRENCY_MAP.get(value, value)
+    elif key.endswith('_date'):
+        return babeldate.parse_date(value, locale=locale)
+
+    return value
+
 
 def skip_empty_lines(fd):
 

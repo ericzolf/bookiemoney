@@ -1,6 +1,7 @@
 ---
 name: postbank
 encoding: cp1252
+locale: de
 type: csv
 
 lines:
