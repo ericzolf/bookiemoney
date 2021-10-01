@@ -51,7 +51,7 @@ def read_input_statements(files_list, flavour):
 
         # then we match the config line by line with the statement's content
         with open(file, mode='r', encoding=flavour_config['encoding']) as fd:
-            file_dict = {'file': file}
+            file_dict = {'file': file, 'config': flavour_config}
             for cfg_line in flavour_config['lines']:
                 if cfg_line['type'] == 'match':
                     result = parse_match(fd, cfg_line)
@@ -65,7 +65,7 @@ def read_input_statements(files_list, flavour):
                             and result['account_name']
                                 != file_dict['account_name']):
                         accounts[file_dict['account_name']].append(file_dict)
-                        file_dict = {'file': file}
+                        file_dict = {'file': file, 'config': flavour_config}
                     file_dict |= result
             # then handle the remaining results after the file has been read
             if 'account_name' in file_dict:
