@@ -186,6 +186,20 @@ def clean_accounts(accounts, flavour_config):
                 for field in line:
                     line[field] = clean_value(field, line[field],
                                               flavour_config)
+                # it would be nicer to have it configurable but I couldn't find
+                # a simple way to express it
+                # basically, some banks/tools only consider a counterpart and
+                # don't document between account owner and counterpart,
+                # who is the originator resp. the receiver
+                if 'transaction_counterpart_name' not in line:
+                    if ('transaction_originator_name' in line
+                            and 'transaction_receiver_name' in line):
+                        if line['transaction_value'] > 0:
+                            line['transaction_counterpart_name'] = line[
+                                'transaction_originator_name']
+                        else:
+                            line['transaction_counterpart_name'] = line[
+                                'transaction_receiver_name']
 
 
 def clean_value(key, value, cfg):
