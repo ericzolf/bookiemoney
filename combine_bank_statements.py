@@ -76,7 +76,7 @@ def read_input_statements(files_list, flavour):
                 accounts[''].append(file_dict)
 
     clean_accounts(accounts, flavour_config)
-    print(yaml.dump(accounts))
+    #print(yaml.dump(accounts))
 
     return accounts
 
@@ -122,7 +122,7 @@ class LinesReader:
 
 def parse_csv(fd, cfg, max_read):
 
-    lines = []
+    transactions = []
     last_pos, next_line = skip_empty_lines(fd)
     header_reader = csv.reader((next_line,), **cfg['dialect'])
     for header in header_reader:
@@ -137,15 +137,15 @@ def parse_csv(fd, cfg, max_read):
         else:
             if 'map' in cfg:
                 row |= map_fields(row, cfg['map'])
-            lines.append(row)
+            transactions.append(row)
 
     if cfg.get('skip', False):
         return {}
 
     if cfg.get('reverse', False):
-        lines.reverse()
+        transactions.reverse()
 
-    return {'lines': lines}
+    return {'transactions': transactions}
 
 
 def map_fields(fields_dict, map_cfg):
@@ -179,10 +179,10 @@ def clean_accounts(accounts, flavour_config):
     for account_key in accounts:
         for file in accounts[account_key]:
             for file_key in file:
-                if file_key != 'lines':
+                if file_key != 'transactions':
                     file[file_key] = clean_value(file_key, file[file_key],
                                                  flavour_config)
-            for line in file['lines']:
+            for line in file['transactions']:
                 for field in line:
                     line[field] = clean_value(field, line[field],
                                               flavour_config)
@@ -200,6 +200,28 @@ def clean_accounts(accounts, flavour_config):
                         else:
                             line['transaction_counterpart_name'] = line[
                                 'transaction_receiver_name']
+                # same principle, not all banks make the difference between
+                # booking and value dates
+                if 'transaction_date' not in line:
+                    if 'transaction_value_date' in line:
+                        line['transaction_date'] = line[
+                            'transaction_value_date']
+                    else:  # it's better to fail here so we don't check
+                        line['transaction_date'] = line[
+                            'transaction_booking_date']
+            # the new account balance value is the balance value of the last
+            # transaction in the file
+            if ('transaction_balance_value' not in line
+                    and 'account_new_balance_value' in file):
+                line['transaction_balance_value'] = file[
+                    'account_new_balance_value']
+            # the old account balance value is the balance value _before_
+            # the first transaction in the file
+            if ('transaction_balance_value' not in file['transactions'][0]
+                    and 'account_old_balance_value' in file):
+                 file['transactions'][0]['transaction_balance_value'] = file[
+                    'account_old_balance_value'
+                    ] + file['transactions'][0]['transaction_value']
 
 
 def clean_value(key, value, cfg):
@@ -225,12 +247,47 @@ def skip_empty_lines(fd):
         next_line = fd.readline().strip()
     return last_pos, next_line
 
-def cleanup_statements(statement):
-    pass
+
+def combine_statement_files(statement):
+    clean_statement = {}
+    transaction_uid = TransactionUid()
+
+    for file in statement:
+        for transaction in file['transactions']:
+            uid = transaction_uid(transaction['transaction_date'])
+            transaction['transaction_uid'] = uid
+            clean_statement[uid] = transaction
+
+    # TODO identify gaps using the balance values - need to consider existing
+    #      entries in the target file at a later stage
+    # sorted_keys_list = sorted(list(clean_statement.keys()))
+
+    return clean_statement
+
+
+class TransactionUid():
+    """
+    Returns a unique ID for a given account taking a date
+
+    This works under the assumption that the order of the transactions within
+    a day remains stable. This is of course only unique within _one_ account.
+    """
+    def __init__(self):
+        self.index = 1
+        self.datenr = 0
+
+    def __call__(self, tdate):
+        datenr = (tdate.year * 10000 + tdate.month * 100 + tdate.day) * 10000
+        if datenr == self.datenr:
+            self.index += 1
+        else:
+            self.index = 1
+            self.datenr = datenr
+        return datenr + 10 * self.index
 
 
 def output_combined_statement(statement, out_file, key):
-    pass
+    print(yaml.dump(statement))
 
 
 # MAIN
@@ -241,5 +298,5 @@ account_statements = read_input_statements(args.inputs, args.flavour)
 
 # there might be more than one account in a file at some banks
 for key in account_statements:
-    statement = cleanup_statements(account_statements[key])
+    statement = combine_statement_files(account_statements[key])
     output_combined_statement(statement, args.out, key)

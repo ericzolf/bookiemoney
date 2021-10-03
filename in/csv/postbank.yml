@@ -26,7 +26,7 @@ lines:
 - type: match
   pattern: "IBAN;(?P<account_id>.*);"
 - type: match
-  pattern: "Aktueller Kontostand;(?P<current_balance_value>.*) (?P<account_currency>.);"
+  pattern: "Aktueller Kontostand;(?P<account_new_balance_value>.*) (?P<account_currency>.);"
 - type: match
   pattern: "Summe der Umsätze in den nächsten 14 Tagen;(.*) (.);"
 - type: match
