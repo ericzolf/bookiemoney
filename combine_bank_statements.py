@@ -10,9 +10,10 @@ import re
 import yaml
 
 
-CURRENCY_MAP = { babelnum.get_currency_symbol(x): x
-                 for x in babelnum.list_currencies()
-                 if x != babelnum.get_currency_symbol(x) }
+CURRENCY_MAP = {babelnum.get_currency_symbol(x): x
+                for x in babelnum.list_currencies()
+                if x != babelnum.get_currency_symbol(x)}
+
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -76,7 +77,7 @@ def read_input_statements(files_list, flavour):
                 accounts[''].append(file_dict)
 
     clean_accounts(accounts, flavour_config)
-    #print(yaml.dump(accounts))
+    # print(yaml.dump(accounts))
 
     return accounts
 
@@ -107,6 +108,7 @@ class LinesReader:
     def __init__(self, fd, max_read=29613):
         self.fd = fd
         self.max_read = max_read
+
     def __next__(self):
         self.last_pos = self.fd.tell()
         # Workaround because fd.readline stays stuck at the EOF
@@ -114,8 +116,10 @@ class LinesReader:
             raise StopIteration
         line = self.fd.readline()
         return line
+
     def __iter__(self):
         return self
+
     def close(self):
         self.fd.seek(self.last_pos)
 
@@ -150,7 +154,9 @@ def parse_csv(fd, cfg, max_read):
 
 def map_fields(fields_dict, map_cfg):
     """
-    recursive function to parse fields in a dictionary according to a mapping config
+    recursive function to parse fields in a dictionary
+
+    parsing is done according to a mapping config
     """
     parsed_dict = {}
     for line in map_cfg:
@@ -200,6 +206,10 @@ def clean_accounts(accounts, flavour_config):
                         else:
                             line['transaction_counterpart_name'] = line[
                                 'transaction_receiver_name']
+                    elif 'transaction_presenter_name' in line:
+                        line['transaction_counterpart_name'] = line[
+                            'transaction_presenter_name']
+
                 # same principle, not all banks make the difference between
                 # booking and value dates
                 if 'transaction_date' not in line:
@@ -219,7 +229,7 @@ def clean_accounts(accounts, flavour_config):
             # the first transaction in the file
             if ('transaction_balance_value' not in file['transactions'][0]
                     and 'account_old_balance_value' in file):
-                 file['transactions'][0]['transaction_balance_value'] = file[
+                file['transactions'][0]['transaction_balance_value'] = file[
                     'account_old_balance_value'
                     ] + file['transactions'][0]['transaction_value']
 
