@@ -200,7 +200,7 @@ def clean_accounts(accounts, flavour_config):
                 if 'transaction_counterpart_name' not in line:
                     if ('transaction_originator_name' in line
                             and 'transaction_receiver_name' in line):
-                        if line['transaction_value'] > 0:
+                        if line['transaction_amount'] > 0:
                             line['transaction_counterpart_name'] = line[
                                 'transaction_originator_name']
                         else:
@@ -221,21 +221,21 @@ def clean_accounts(accounts, flavour_config):
                             'transaction_booking_date']
             # the new account balance value is the balance value of the last
             # transaction in the file
-            if ('transaction_balance_value' not in line
-                    and 'account_new_balance_value' in file):
-                line['transaction_balance_value'] = file[
-                    'account_new_balance_value']
+            if ('transaction_balance_amount' not in line
+                    and 'account_new_balance_amount' in file):
+                line['transaction_balance_amount'] = file[
+                    'account_new_balance_amount']
             # the old account balance value is the balance value _before_
             # the first transaction in the file
-            if ('transaction_balance_value' not in file['transactions'][0]
-                    and 'account_old_balance_value' in file):
-                file['transactions'][0]['transaction_balance_value'] = file[
-                    'account_old_balance_value'
-                    ] + file['transactions'][0]['transaction_value']
+            if ('transaction_balance_amount' not in file['transactions'][0]
+                    and 'account_old_balance_amount' in file):
+                file['transactions'][0]['transaction_balance_amount'] = file[
+                    'account_old_balance_amount'
+                    ] + file['transactions'][0]['transaction_amount']
 
 
 def clean_value(key, value, cfg):
-    if key.endswith('_value'):
+    if key.endswith('_amount'):
         return babelnum.parse_decimal(value, locale=cfg['locale'])
     elif key.endswith('_currency'):
         return CURRENCY_MAP.get(value, value)

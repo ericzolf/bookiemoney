@@ -26,7 +26,7 @@ lines:
 - type: match
   pattern: "IBAN;(?P<account_id>.*);"
 - type: match
-  pattern: "Aktueller Kontostand;(?P<account_new_balance_value>.*) (?P<account_currency>.);"
+  pattern: "Aktueller Kontostand;(?P<account_new_balance_amount>.*) (?P<account_currency>.);"
 - type: match
   pattern: "Summe der Umsätze in den nächsten 14 Tagen;(.*) (.);"
 - type: match
@@ -79,7 +79,7 @@ lines:
     - key: Empfänger
       pattern: "(?P<transaction_receiver_name>.*)"
   - key: Betrag (€)
-    pattern: "(?P<transaction_value>.*) (?P<transaction_currency>.)"
+    pattern: "(?P<transaction_amount>.*) (?P<transaction_currency>.)"
   - key: Saldo (€)
-    pattern: "(?P<transaction_balance_value>.*) (?P<transaction_balance_currency>.)"
+    pattern: "(?P<transaction_balance_amount>.*) (?P<transaction_balance_currency>.)"
 ...
