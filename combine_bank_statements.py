@@ -20,8 +20,10 @@ def parse_arguments():
         description='Combine multiple bank statements into one file')
     parser.add_argument('--out', '-o', required=True,
                         help='name of the output file [mandatory]')
-    parser.add_argument('--flavour', required=True,
+    parser.add_argument('--flavour-in', required=True,
                         help='type of the account statement [mandatory]')
+    parser.add_argument('--flavour-out', required=True,
+                        help='type of the output file [mandatory]')
     parser.add_argument('inputs', nargs='+', metavar='statements',
                         help='one or more input statement files')
 
@@ -296,17 +298,53 @@ class TransactionUid():
         return datenr + 10 * self.index
 
 
-def output_combined_statement(statement, out_file, key):
-    print(yaml.dump(statement))
+def output_combined_statement(statement, out_file, key, flavour):
 
+    # an output file can have a placeholder for the key
+    if "{}" in out_file:
+        out_file = out_file.format(key)
+
+    # the extension of the file gives us the file type
+    extension = os.path.splitext(out_file)[1].lstrip('.')
+
+    # we read the flavour's configuration file
+    flavour_file = os.path.join('out', extension, flavour + '.yml')
+    with open(flavour_file, mode='r') as yfd:
+        flavour_config = yaml.safe_load(yfd)
+
+    print(yaml.dump(flavour_config))
+
+    fields = list(flavour_config['fields'].keys())
+
+    with open(out_file, 'w', newline='') as csvfile:
+        if isinstance(flavour_config['dialect'], str):
+            writer = csv.DictWriter(csvfile, fieldnames=fields,
+                                    dialect=flavour_config['dialect'])
+        else:  # the dialect is a dictionary of CSV options
+            writer = csv.DictWriter(csvfile, fieldnames=fields,
+                                    **flavour_config['dialect'])
+        if flavour_config.get('header', True):
+            writer.writeheader()
+        for uid in statement:
+            row = {}
+            for field in fields:
+                value = get_field_value(statement[uid],
+                                        flavour_config['fields'][field],
+                                        flavour_config['locale'])
+                row[field] = value
+            writer.writerow(row)
+
+
+def get_field_value(transaction, field_map, locale):
+    pass
 
 # MAIN
 
 args = parse_arguments()
 
-account_statements = read_input_statements(args.inputs, args.flavour)
+account_statements = read_input_statements(args.inputs, args.flavour_in)
 
 # there might be more than one account in a file at some banks
 for key in account_statements:
     statement = combine_statement_files(account_statements[key])
-    output_combined_statement(statement, args.out, key)
+    output_combined_statement(statement, args.out, key, args.flavour_out)
