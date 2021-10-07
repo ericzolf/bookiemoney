@@ -7,10 +7,11 @@ header: true  # default is true
 
 fields:  # http://homebank.free.fr/help/misc-csvformat.html
   date:  # the date format can be: y-m-d m-d-y d-m-y year can be 2 or 4 digits separators can be / . or -
-    value: transaction_date
+    value: $transaction_date
     format_date: YYYY-MM-dd
   payment:  # You cannot import transaction with payment type=5 (internal xfer) from 0=none to 10=FI fee (in the same order of the list)
-    value:
+    value: $transaction_payment_type
+    map:
       # https://bazaar.launchpad.net/~mdoyen/homebank/trunk/view/head:/src/enums.h
       # 1 = credit card
       payout: 3  # cash
@@ -24,16 +25,16 @@ fields:  # http://homebank.free.fr/help/misc-csvformat.html
   info:  # a string
     value:
     - "{transaction_reference}/{transaction_mandate}/{transaction_presenter_id}"
-    - "{transaction_reference}"
+    - $transaction_reference
     - ""
   payee:  # a payee name
-    value: transaction_counterpart_name
+    value: $transaction_counterpart_name
   memo:  # a string
     value:
     - "{transaction_details} in {transaction_city} ({transaction_country_code})"
-    - transaction_details
+    - $transaction_details
   amount:  # a number with a '.' or ',' as decimal separator, ex: -24.12 or 36,75
-    value: transaction_amount
+    value: $transaction_amount
   category:  # a full category name (category, or category:subcategory)
     value: ""
   tags:  # tags separated by space

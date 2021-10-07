@@ -315,6 +315,10 @@ def output_combined_statement(statement, out_file, key, flavour):
     print(yaml.dump(flavour_config))
 
     fields = list(flavour_config['fields'].keys())
+    # normalize values to a list
+    for fieldval in flavour_config['fields'].values():
+        if not isinstance(fieldval['value'], list):
+            fieldval['value'] = (fieldval['value'],)
 
     with open(out_file, 'w', newline='') as csvfile:
         if isinstance(flavour_config['dialect'], str):
@@ -328,15 +332,31 @@ def output_combined_statement(statement, out_file, key, flavour):
         for uid in statement:
             row = {}
             for field in fields:
-                value = get_field_value(statement[uid],
+                value = get_field_value(field, statement[uid],
                                         flavour_config['fields'][field],
                                         flavour_config['locale'])
                 row[field] = value
+            # print(row)
             writer.writerow(row)
 
 
-def get_field_value(transaction, field_map, locale):
-    pass
+def get_field_value(field, transaction, field_map, locale=None):
+    ret_value = None
+    for value_map in field_map['value']:
+        try:
+            if '{' in value_map:  # we assume a format
+                ret_value = value_map.format(**transaction)
+            elif value_map.startswith('$'):
+                ret_value = transaction[value_map[1:]]
+            else:  # either a key name or a plain string
+                ret_value = value_map
+            break
+        except KeyError as exc:
+            last_exc = exc
+            continue
+        if ret_value is None:  # nothing did fit
+            raise KeyError("Nothing matched a value for '{fi}' in '{tr}', last error is '{ex}'".format(fi=field, tr=transaction, ex=last_exc))
+    return ret_value
 
 # MAIN
 
