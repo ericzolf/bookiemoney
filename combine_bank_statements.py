@@ -312,13 +312,11 @@ def output_combined_statement(statement, out_file, key, flavour):
     with open(flavour_file, mode='r') as yfd:
         flavour_config = yaml.safe_load(yfd)
 
-    print(yaml.dump(flavour_config))
-
-    fields = list(flavour_config['fields'].keys())
     # normalize values to a list
-    for fieldval in flavour_config['fields'].values():
-        if not isinstance(fieldval['value'], list):
-            fieldval['value'] = (fieldval['value'],)
+    normalize_fields(flavour_config['fields'])
+    fields = list(flavour_config['fields'].keys())
+
+    print(yaml.dump(flavour_config))
 
     with open(out_file, 'w', newline='') as csvfile:
         if isinstance(flavour_config['dialect'], str):
@@ -334,11 +332,18 @@ def output_combined_statement(statement, out_file, key, flavour):
             for field in fields:
                 value = get_field_value(field, statement[uid],
                                         flavour_config['fields'][field],
-                                        flavour_config['locale'])
+                                        flavour_config.get('locale'))
                 row[field] = value
             # print(row)
             writer.writerow(row)
 
+    
+def normalize_fields(fields):
+    for key in fields:
+        if fields[key] is None:
+            fields[key] = {'value': ['$' + key, '']}
+        if not isinstance(fields[key]['value'], list):
+            fields[key]['value'] = (fields[key]['value'],)
 
 def get_field_value(field, transaction, field_map, locale=None):
     ret_value = None

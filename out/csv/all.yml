@@ -1,0 +1,27 @@
+---
+name: all
+type: csv
+dialect: unix  # can also be a dialect dictionary
+header: true  # default is true
+
+fields:
+  transaction_uid:
+  transaction_date:
+  transaction_booking_date:
+  transaction_value_date:
+  transaction_payment_type:
+  transaction_counterpart_name:
+  transaction_originator_name:
+  transaction_receiver_name:
+  transaction_payment_card:
+  transaction_reference:
+  transaction_mandate:
+  transaction_presenter_id:
+  transaction_presenter_name:
+  transaction_city:
+  transaction_country_code:
+  transaction_details:
+  transaction_amount:
+  transaction_currency:
+  transaction_balance_amount:
+  transaction_balance_currency:
