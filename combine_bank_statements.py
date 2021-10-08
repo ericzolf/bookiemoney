@@ -354,9 +354,19 @@ def get_field_value(field, transaction, field_map, locale=None):
         except KeyError as exc:
             last_exc = exc
             continue
-        if ret_value is None:  # nothing did fit
-            raise KeyError("Nothing matched a value for '{fi}' in '{tr}', last error is '{ex}'".format(fi=field, tr=transaction, ex=last_exc))
+
+    if ret_value is None:  # nothing did fit
+        raise KeyError(
+            "Nothing matched a value for '{fi}' in '{tr}', "
+            "last error is '{ex}'".format(
+                fi=field, tr=transaction, ex=last_exc))
+
+    # once we have a value, we can first map it, then format it
+    if 'map' in field_map:
+        ret_value = field_map['map'][ret_value]
+    # TODO formatting of the return value
     return ret_value
+
 
 # MAIN
 
