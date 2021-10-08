@@ -262,9 +262,9 @@ def skip_empty_lines(fd):
 
 def combine_statement_files(statement):
     clean_statement = {}
-    transaction_uid = TransactionUid()
 
     for file in statement:
+        transaction_uid = TransactionUid()
         for transaction in file['transactions']:
             uid = transaction_uid(transaction['transaction_date'])
             transaction['transaction_uid'] = uid

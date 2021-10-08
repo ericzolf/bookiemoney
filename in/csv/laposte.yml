@@ -1,0 +1,39 @@
+---
+name: La Poste
+encoding: cp1252
+locale: fr
+type: csv
+
+lines:
+- type: match
+  pattern: "Numéro Compte *;(?P<account_national_id>.*)"
+- type: match
+  pattern: "Type *;(?P<account_id>.*)"
+- type: match
+  pattern: "Compte tenu en *;.*"
+- type: match
+  pattern: "Date *;(?P<statement_date>.*)"
+- type: match
+  pattern: "Solde \\((?P<account_currency>...)OS\\) *;(?P<account_new_balance_amount>.*)"
+- type: match
+  pattern: "Solde \\(FRANCS\\) *;.*"
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 0  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Date
+    pattern: "(?P<transaction_date>.*)"
+  - key: Libellé
+    pattern: "(?P<transaction_details>.*)"
+  - key: "Montant(EUROS)"
+    pattern: "(?P<transaction_amount>.*)"
+  - key: "Montant(FRANCS)"
+    pattern: ".*"
