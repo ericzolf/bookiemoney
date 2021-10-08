@@ -380,6 +380,13 @@ args = parse_arguments()
 
 account_statements = read_input_statements(args.inputs, args.flavour_in)
 
+# make sure we detect if output files could get overwritten
+if len(account_statements) > 1 and '{}' not in args.out:
+    raise AttributeError(
+        "Out file {of} doesn't contain {{}}. That would mean overwriting some "
+        "output as there is more than one account in the input files".format(
+            of=args.out))
+
 # there might be more than one account in a file at some banks
 for key in account_statements:
     statement = combine_statement_files(account_statements[key])
