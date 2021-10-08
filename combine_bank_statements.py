@@ -217,10 +217,10 @@ def clean_accounts(accounts, flavour_config):
                 if 'transaction_date' not in line:
                     if 'transaction_value_date' in line:
                         line['transaction_date'] = line[
-                            'transaction_value_date']
+                            'transaction_booking_date']
                     else:  # it's better to fail here so we don't check
                         line['transaction_date'] = line[
-                            'transaction_booking_date']
+                            'transaction_value_date']
             # the new account balance value is the balance value of the last
             # transaction in the file
             if ('transaction_balance_amount' not in line
@@ -274,7 +274,8 @@ def combine_statement_files(statement):
     #      entries in the target file at a later stage
     # sorted_keys_list = sorted(list(clean_statement.keys()))
 
-    return clean_statement
+    # we return a properly sorted dictionary
+    return dict(sorted(clean_statement.items()))
 
 
 class TransactionUid():
