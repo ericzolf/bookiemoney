@@ -9,6 +9,7 @@ import locale
 import logging
 import os
 import re
+import sys
 import yaml
 
 
@@ -242,6 +243,8 @@ def clean_accounts(accounts, flavour_config):
 
             # if no transactions were found in this file, we're finished with it
             if not file['transactions']:
+                logging.warning("There is no transaction in file '{fi}'".format(
+                    fi=os.path.basename(file['file'])))
                 logging.debug(file)
                 continue
 
@@ -449,10 +452,11 @@ account_statements = read_input_statements(args.inputs, args.flavour_in)
 
 # make sure we detect if output files could get overwritten
 if len(account_statements) > 1 and '{}' not in args.out:
-    raise AttributeError(
+    logging.critical(
         "Out file {of} doesn't contain {{}}. That would mean overwriting some "
         "output as there is more than one account in the input files".format(
             of=args.out))
+    sys.exit(1)
 
 # there might be more than one account in a file at some banks
 for key in account_statements:
