@@ -6,6 +6,7 @@ import babel.dates as babeldate
 import collections
 import csv
 import locale
+import logging
 import os
 import re
 import yaml
@@ -27,6 +28,10 @@ def parse_arguments():
                         help='type of the output file [mandatory]')
     parser.add_argument('inputs', nargs='+', metavar='statements',
                         help='one or more input statement files')
+    parser.add_argument(
+        '--loglevel', choices=('DEBUG','INFO', 'WARNING', 'ERROR', 'CRITICAL'),
+        help='which level of messages do you want to see?')
+    parser.add_argument('--logfile', help='name of a logfile to send logs to')
 
     return parser.parse_args()
 
@@ -42,6 +47,8 @@ def read_input_statements(files_list, flavour):
     accounts = collections.defaultdict(list)
 
     for file in files_list:
+        logging.info("Reading input file '{fi}'".format(fi=file))
+
         # the extension of the file gives us the file type
         extension = os.path.splitext(file)[1].lstrip('.')
 
@@ -79,7 +86,7 @@ def read_input_statements(files_list, flavour):
                 accounts[''].append(file_dict)
 
     clean_accounts(accounts, flavour_config)
-    # print(yaml.dump(accounts))
+    logging.debug(yaml.dump(accounts))
 
     return accounts
 
@@ -185,7 +192,10 @@ def map_fields(fields_dict, map_cfg):
 
 def clean_accounts(accounts, flavour_config):
     for account_key in accounts:
+        logging.info("Cleaning account '{ac}'".format(ac=account_key))
         for file in accounts[account_key]:
+            logging.info("Cleaning account file '{af}'".format(
+                af=os.path.basename(file['file'])))
             default_currency = file.get('account_currency',
                                         flavour_config.get('currency',
                                         get_locale_currency_code(
@@ -232,7 +242,7 @@ def clean_accounts(accounts, flavour_config):
 
             # if no transactions were found in this file, we're finished with it
             if not file['transactions']:
-                # print(file)
+                logging.debug(file)
                 continue
 
             # the new account balance value is the balance value of the last
@@ -292,6 +302,10 @@ def combine_statement_files(statement):
     clean_statement = {}
 
     for file in statement:
+        logging.info(
+            "Combining {tn} transactions from statement file '{sf}'".format(
+                tn=len(file['transactions']),
+                sf=os.path.basename(file['file'])))
         transaction_uid = TransactionUid()
         for transaction in file['transactions']:
             uid = transaction_uid(transaction['transaction_date'])
@@ -345,7 +359,9 @@ def output_combined_statement(statement, out_file, key, flavour):
     normalize_fields(flavour_config['fields'])
     fields = list(flavour_config['fields'].keys())
 
-    # print(yaml.dump(flavour_config))
+    logging.info("Writing {tr} transactions to output file '{of}'".format(
+        tr=len(statement), of=out_file))
+    logging.debug(yaml.dump(flavour_config))
 
     with open(out_file, 'w', newline='') as csvfile:
         if isinstance(flavour_config['dialect'], str):
@@ -363,7 +379,7 @@ def output_combined_statement(statement, out_file, key, flavour):
                                         flavour_config['fields'][field],
                                         flavour_config.get('locale'))
                 row[field] = value
-            # print(row)
+            logging.debug(row)
             writer.writerow(row)
 
     
@@ -421,6 +437,14 @@ def get_locale_currency_code(given_locale=None):
 
 args = parse_arguments()
 
+# setup the logging
+if args.loglevel:
+    num_loglevel = getattr(logging, args.loglevel.upper(), None)
+    if args.logfile:
+        logging.basicConfig(filename=args.logfile, level=num_loglevel)
+    else:
+        logging.basicConfig(level=num_loglevel)
+
 account_statements = read_input_statements(args.inputs, args.flavour_in)
 
 # make sure we detect if output files could get overwritten
@@ -432,5 +456,6 @@ if len(account_statements) > 1 and '{}' not in args.out:
 
 # there might be more than one account in a file at some banks
 for key in account_statements:
+    logging.info("Handling account '{ac}'".format(ac=key))
     statement = combine_statement_files(account_statements[key])
     output_combined_statement(statement, args.out, key, args.flavour_out)
