@@ -13,6 +13,7 @@ payment_types:
   Lastschrift: direct_debit
   "Überweisung": bank_transfer
   "Überweisung giropay": electronic_payment
+identifier: account_id
 
 lines:
 - type: match

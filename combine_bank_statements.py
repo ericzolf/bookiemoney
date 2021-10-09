@@ -49,6 +49,8 @@ def read_input_statements(files_list, flavour):
         with open(flavour_file, mode='r') as yfd:
             flavour_config = yaml.safe_load(yfd)
 
+        account_uid = flavour_config['identifier']
+
         # Workaround because fd.readline stays stuck at the EOF
         file_size = os.path.getsize(file)
 
@@ -63,18 +65,15 @@ def read_input_statements(files_list, flavour):
                 if result:  # we consider each config line optional
                     # handling the presence of multiple accounts in the same
                     # file but differentiating them by name
-                    if ('account_name' in result
-                            and 'account_name' in file_dict
-                            and result['account_name']
-                                != file_dict['account_name']):
-                        accounts[file_dict['account_name']].append(file_dict)
+                    if (account_uid in result
+                            and account_uid in file_dict
+                            and result[account_uid] != file_dict[account_uid]):
+                        accounts[file_dict[account_uid]].append(file_dict)
                         file_dict = {'file': file, 'config': flavour_config}
                     file_dict |= result
             # then handle the remaining results after the file has been read
-            if 'account_name' in file_dict:
-                accounts[file_dict['account_name']].append(file_dict)
-            elif 'account_id' in file_dict:
-                accounts[file_dict['account_id']].append(file_dict)
+            if account_uid in file_dict:
+                accounts[file_dict[account_uid]].append(file_dict)
             else:
                 accounts[''].append(file_dict)
 

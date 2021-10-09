@@ -3,12 +3,13 @@ name: La Poste
 encoding: cp1252
 locale: fr
 type: csv
+identifier: account_national_id
 
 lines:
 - type: match
   pattern: "Numéro Compte *;(?P<account_national_id>.*)"
 - type: match
-  pattern: "Type *;(?P<account_id>.*)"
+  pattern: "Type *;(?P<account_type>.*)"
 - type: match
   pattern: "Compte tenu en *;.*"
 - type: match
