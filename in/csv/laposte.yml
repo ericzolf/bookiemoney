@@ -4,6 +4,7 @@ encoding: cp1252
 locale: fr
 type: csv
 identifier: account_national_id
+#currency: EUR  # only necessary if it can't be read from each statement file
 
 lines:
 - type: match

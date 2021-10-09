@@ -5,6 +5,7 @@ import babel.numbers as babelnum
 import babel.dates as babeldate
 import collections
 import csv
+import locale
 import os
 import re
 import yaml
@@ -185,6 +186,10 @@ def map_fields(fields_dict, map_cfg):
 def clean_accounts(accounts, flavour_config):
     for account_key in accounts:
         for file in accounts[account_key]:
+            default_currency = file.get('account_currency',
+                                        flavour_config.get('currency',
+                                        get_locale_currency_code(
+                                            flavour_config.get('locale'))))
             for file_key in file:
                 if file_key != 'transactions':
                     file[file_key] = clean_value(file_key, file[file_key],
@@ -210,6 +215,10 @@ def clean_accounts(accounts, flavour_config):
                     elif 'transaction_presenter_name' in line:
                         line['transaction_counterpart_name'] = line[
                             'transaction_presenter_name']
+                if 'transaction_currency' not in line:
+                    line['transaction_currency'] = default_currency
+                if 'transaction_balance_currency' not in line:
+                    line['transaction_balance_currency'] = default_currency
 
                 # same principle, not all banks make the difference between
                 # booking and value dates
@@ -222,17 +231,31 @@ def clean_accounts(accounts, flavour_config):
                             'transaction_value_date']
             # the new account balance value is the balance value of the last
             # transaction in the file
-            if ('transaction_balance_amount' not in line
+            if ('transaction_balance_amount' not in file['transactions'][-1]
                     and 'account_new_balance_amount' in file):
-                line['transaction_balance_amount'] = file[
+                oldline = file['transactions'][-1]
+                oldline['transaction_balance_amount'] = file[
                     'account_new_balance_amount']
+                for line in file['transactions'][-2::-1]:
+                    if 'transaction_balance_amount' not in line:
+                        line['transaction_balance_amount'] = (
+                                oldline['transaction_balance_amount']
+                                - oldline['transaction_amount'])
+                    oldline = line
             # the old account balance value is the balance value _before_
             # the first transaction in the file
-            if ('transaction_balance_amount' not in file['transactions'][0]
+            elif ('transaction_balance_amount' not in file['transactions'][0]
                     and 'account_old_balance_amount' in file):
-                file['transactions'][0]['transaction_balance_amount'] = file[
-                    'account_old_balance_amount'
-                    ] + file['transactions'][0]['transaction_amount']
+                oldline = file['transactions'][0]
+                oldline['transaction_balance_amount'] = (
+                        file['account_old_balance_amount']
+                        + oldline['transaction_amount'])
+                for line in file['transactions'][1:]:
+                    if 'transaction_balance_amount' not in line:
+                        line['transaction_balance_amount'] = (
+                                oldline['transaction_balance_amount']
+                                + line['transaction_amount'])
+                    oldline = line
 
 
 def clean_value(key, value, cfg):
@@ -371,6 +394,21 @@ def get_field_value(field, transaction, field_map, locale=None):
         ret_value = field_map['map'][ret_value]
     # TODO formatting of the return value
     return ret_value
+
+
+def get_locale_currency_code(given_locale=None):
+    """
+    Returns the 3-letters currency code of the given locale or the current one
+    """
+    curr_locale = locale.getlocale()
+    if given_locale:
+        locale.setlocale(locale.LC_ALL, (given_locale, curr_locale[1]))
+    else:
+        locale.setlocale(locale.LC_ALL, curr_locale)
+    currency = locale.localeconv()['int_curr_symbol']
+    # else we might not be able to find back the current locale
+    locale.setlocale(locale.LC_ALL, curr_locale)
+    return currency
 
 
 # MAIN

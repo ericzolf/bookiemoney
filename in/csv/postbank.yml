@@ -14,6 +14,7 @@ payment_types:
   "Überweisung": bank_transfer
   "Überweisung giropay": electronic_payment
 identifier: account_id
+#currency: EUR  # only necessary if it can't be read from each statement file
 
 lines:
 - type: match
