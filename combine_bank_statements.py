@@ -229,6 +229,12 @@ def clean_accounts(accounts, flavour_config):
                     else:  # it's better to fail here so we don't check
                         line['transaction_date'] = line[
                             'transaction_value_date']
+
+            # if no transactions were found in this file, we're finished with it
+            if not file['transactions']:
+                # print(file)
+                continue
+
             # the new account balance value is the balance value of the last
             # transaction in the file
             if ('transaction_balance_amount' not in file['transactions'][-1]
@@ -339,7 +345,7 @@ def output_combined_statement(statement, out_file, key, flavour):
     normalize_fields(flavour_config['fields'])
     fields = list(flavour_config['fields'].keys())
 
-    print(yaml.dump(flavour_config))
+    # print(yaml.dump(flavour_config))
 
     with open(out_file, 'w', newline='') as csvfile:
         if isinstance(flavour_config['dialect'], str):
