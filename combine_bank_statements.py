@@ -116,7 +116,7 @@ class LinesReader:
     We need this wrapper because csv.DictReader resp. 'next()' blocks
     the usage of fd.tell() which we need to step back
     """
-    def __init__(self, fd, max_read=29613):
+    def __init__(self, fd, max_read):
         self.fd = fd
         self.last_pos = self.next_pos = fd.tell()
         self.max_read = max_read
