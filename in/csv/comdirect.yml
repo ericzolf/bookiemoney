@@ -1,0 +1,154 @@
+---
+name: comdirect
+encoding: cp1252
+locale: de
+type: csv
+payment_types:
+# somewhat aligned with http://homebank.free.fr/help/00-lexicon.html#payment
+  Auszahlung: payout
+  Dauerauftrag: standing_order
+  Gehalt/Rente: salary_pension
+  Gutschrift: direct_credit
+  Kartenzahlung: debit_card
+  Lastschrift: direct_debit
+  "Überweisung": bank_transfer
+  "Überweisung giropay": electronic_payment
+identifier: account_name
+
+lines:
+- type: match
+  pattern: ";"
+
+- type: match
+  pattern: '"Umsätze (?P<account_name>Giro.*)";"Zeitraum: .*";'
+- type: match
+  pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: "Wertstellung (Valuta)"
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Vorgang
+    pattern: "(?P<transaction_payment_type>.*)"
+  - key: Buchungstext
+    pattern:
+      - "Empfänger: (?P<transaction_receiver_name>.*)(?P<transaction_presenter_id>Kto/IBAN: .* BLZ/BIC: .*) *Buchungstext: (?P<transaction_details>.*) *Ref. (?P<transaction_reference>.*)"
+      - "Auftraggeber: (?P<transaction_originator_name>.*) *Buchungstext: (?P<transaction_details>.*) *Ref. (?P<transaction_reference>.*)"
+  - key: Umsatz in EUR
+    pattern: "(?P<transaction_amount>.*) (?P<transaction_currency>.)"
+- type: match
+  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+
+- type: match
+  pattern: '"Umsätze (?P<account_name>Visa.*)";"Zeitraum: .*";'
+- type: match
+  pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: Umsatztag
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Vorgang
+    pattern: "(?P<transaction_payment_type>Visa-Kartenabrechnung)"
+    then:
+    - key: Buchungstext
+      pattern: "(?P<transaction_details>.*)"
+    else:
+    - key: Buchungstext
+      pattern: "(?P<transaction_counterpart_name>.*)"
+  - key: Referenz
+    pattern: "(?P<transaction_reference>.*)"
+  - key: Umsatz in EUR
+    pattern: "(?P<transaction_amount>.*) (?P<transaction_currency>.)"
+- type: match
+  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+
+- type: match
+  pattern: '"Umsätze (?P<account_name>Tagesgeld.*)";"Zeitraum: .*";'
+- type: match
+  pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: "Wertstellung (Valuta)"
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Vorgang
+    pattern: "(?P<transaction_payment_type>.*)"
+  - key: Buchungstext
+    pattern:
+      - "Auftraggeber: (?P<transaction_receiver_name>.*)(?P<transaction_presenter_id>Kto/IBAN: .* *BLZ/BIC: .*) *Buchungstext: (?P<transaction_details>.*) *End-to-End-Ref.: *nicht angegeben *Ref. (?P<transaction_reference>.*)"
+      - "Buchungstext: (?P<transaction_details>.*) *Ref. (?P<transaction_reference>.*)"
+  - key: Umsatz in EUR
+    pattern: "(?P<transaction_amount>.*) (?P<transaction_currency>.)"
+- type: match
+  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+
+- type: match
+  pattern: '"Umsätze (?P<account_name>Depot.*)";"Zeitraum: .*";'
+- type: match
+  pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: Geschäftstag
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Stück / Nom.
+    pattern: "(?P<transaction_paper_quantity>[+-]*[0-9]*)"
+  - key: Bezeichnung
+    pattern: "(?P<transaction_paper_name>.*)"
+  - key: WKN
+    pattern: "(?P<transaction_paper_id>.*)"
+  - key: Währung
+    pattern: "(?P<transaction_paper_currency>.*)"
+  - key: "Ausführungs-<br/>kurs"
+    pattern: "(?P<transaction_paper_amount>.*)"
+  - key: Umsatz in EUR
+    pattern: "(?P<transaction_amount>.*)"
+- type: match
+  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+
+...

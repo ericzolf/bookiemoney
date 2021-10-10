@@ -25,3 +25,8 @@ fields:
   transaction_currency:
   transaction_balance_amount:
   transaction_balance_currency:
+  transaction_paper_quantity:
+  transaction_paper_name:
+  transaction_paper_id:
+  transaction_paper_currency:
+  transaction_paper_amount:

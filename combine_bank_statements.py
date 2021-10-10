@@ -68,7 +68,7 @@ def read_input_statements(files_list, flavour):
             file_dict = {'file': file, 'config': flavour_config}
             for cfg_line in flavour_config['lines']:
                 if cfg_line['type'] == 'match':
-                    result = parse_match(fd, cfg_line)
+                    result = parse_match(fd, cfg_line, file_size)
                 elif cfg_line['type'] == 'csv':
                     result = parse_csv(fd, cfg_line, file_size)
                 if result:  # we consider each config line optional
@@ -92,9 +92,9 @@ def read_input_statements(files_list, flavour):
     return accounts
 
 
-def parse_match(fd, cfg):
+def parse_match(fd, cfg, max_read):
 
-    last_pos, next_line = skip_empty_lines(fd)
+    last_pos, next_line = skip_empty_lines(fd, max_read)
 
     # try to match line with pattern
     result = re.fullmatch(cfg['pattern'], next_line)
@@ -137,7 +137,7 @@ class LinesReader:
 def parse_csv(fd, cfg, max_read):
 
     transactions = []
-    last_pos, next_line = skip_empty_lines(fd)
+    last_pos, next_line = skip_empty_lines(fd, max_read)
     header_reader = csv.reader((next_line,), **cfg['dialect'])
     for header in header_reader:
         pass  # there is only one line
@@ -290,12 +290,12 @@ def clean_value(key, value, cfg):
     return value
 
 
-def skip_empty_lines(fd):
+def skip_empty_lines(fd, max_read):
 
     # skip any empty line
     last_pos = fd.tell()
     next_line = fd.readline().strip()
-    while not next_line:
+    while (not next_line) and last_pos < max_read:
         last_pos = fd.tell()
         next_line = fd.readline().strip()
     return last_pos, next_line
