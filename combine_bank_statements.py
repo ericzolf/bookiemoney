@@ -17,6 +17,7 @@ CURRENCY_MAP = {babelnum.get_currency_symbol(x): x
                 for x in babelnum.list_currencies()
                 if x != babelnum.get_currency_symbol(x)}
 
+TWO_POW_64 = 2**64
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -117,14 +118,23 @@ class LinesReader:
     """
     def __init__(self, fd, max_read=29613):
         self.fd = fd
+        self.last_pos = self.next_pos = fd.tell()
         self.max_read = max_read
 
     def __next__(self):
-        self.last_pos = self.fd.tell()
+        last_pos = self.fd.tell()
         # Workaround because fd.readline stays stuck at the EOF
-        if self.last_pos >= self.max_read:
+        if last_pos >= self.max_read:
+            if last_pos > TWO_POW_64:
+                self.last_pos = last_pos - TWO_POW_64
+            else:
+                self.last_pos = self.next_pos
             raise StopIteration
+        else:
+            self.last_pos = last_pos
         line = self.fd.readline()
+        # part of the workaround because read seeks beyond 2**64
+        self.next_pos = self.last_pos + len(line)
         return line
 
     def __iter__(self):
@@ -146,12 +156,13 @@ def parse_csv(fd, cfg, max_read):
     for row in reader:
         if None in row or row[header[-1]] is None:
             # the line didn't parse correctly, end of the csv...
-            lines_reader.close()
             break
         else:
             if 'map' in cfg:
                 row |= map_fields(row, cfg['map'])
             transactions.append(row)
+
+    lines_reader.close()
 
     if cfg.get('skip', False):
         return {}

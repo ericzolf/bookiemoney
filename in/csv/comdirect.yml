@@ -5,14 +5,13 @@ locale: de
 type: csv
 payment_types:
 # somewhat aligned with http://homebank.free.fr/help/00-lexicon.html#payment
-  Auszahlung: payout
-  Dauerauftrag: standing_order
-  Gehalt/Rente: salary_pension
+  Auszahlung GAA: payout
+  Kupon: coupon
+  Lastschrift / Belastung: direct_debit
+  Übertrag / Überweisung: bank_transfer
+  Visa-Umsatz: credit_card
+  Visa-Kartenabrechnung: bank_transfer
   Gutschrift: direct_credit
-  Kartenzahlung: debit_card
-  Lastschrift: direct_debit
-  "Überweisung": bank_transfer
-  "Überweisung giropay": electronic_payment
 identifier: account_name
 
 lines:
@@ -28,7 +27,7 @@ lines:
     delimiter: ";"
     doublequote: false
     escapechar: null  # None
-    lineterminator: "\n"
+    lineterminator: "\r\n"
     quotechar: '"'
     quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
     skipinitialspace: true
@@ -74,10 +73,12 @@ lines:
     pattern: "(?P<transaction_payment_type>Visa-Kartenabrechnung)"
     then:
     - key: Buchungstext
-      pattern: "(?P<transaction_details>.*)"
+      pattern: " *(?P<transaction_details>.*) *"
     else:
+    - key: Vorgang
+      pattern: "(?P<transaction_payment_type>.*)"
     - key: Buchungstext
-      pattern: "(?P<transaction_counterpart_name>.*)"
+      pattern: " *(?P<transaction_counterpart_name>.*) *"
   - key: Referenz
     pattern: "(?P<transaction_reference>.*)"
   - key: Umsatz in EUR
@@ -125,7 +126,7 @@ lines:
     delimiter: ";"
     doublequote: false
     escapechar: null  # None
-    lineterminator: "\n"
+    lineterminator: "\r\n"
     quotechar: '"'
     quoting: 1  # 0=minimal, 1=all, 2=nonnumeric, 3=none
     skipinitialspace: true
