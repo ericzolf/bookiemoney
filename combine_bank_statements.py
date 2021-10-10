@@ -195,6 +195,12 @@ def clean_accounts(accounts, flavour_config):
     for account_key in accounts:
         logging.info("Cleaning account '{ac}'".format(ac=account_key))
         for file in accounts[account_key]:
+            if not file['transactions']:
+                logging.warning(
+                    "Account file '{af}' didn't contain transations "
+                    "for account '{ac}'".format(
+                        af=os.path.basename(file['file']), ac=account_key))
+                continue
             logging.info("Cleaning account file '{af}'".format(
                 af=os.path.basename(file['file'])))
             default_currency = file.get('account_currency',
