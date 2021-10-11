@@ -66,26 +66,28 @@ def read_input_statements(files_list, flavour):
 
         # then we match the config line by line with the statement's content
         with open(file, mode='r', encoding=flavour_config['encoding']) as fd:
-            file_dict = {'file': file, 'config': flavour_config}
-            for cfg_line in flavour_config['lines']:
-                if cfg_line['type'] == 'match':
-                    result = parse_match(fd, cfg_line, file_size)
-                elif cfg_line['type'] == 'csv':
-                    result = parse_csv(fd, cfg_line, file_size)
-                if result:  # we consider each config line optional
-                    # handling the presence of multiple accounts in the same
-                    # file but differentiating them by name
-                    if (account_uid in result
-                            and account_uid in file_dict
-                            and result[account_uid] != file_dict[account_uid]):
-                        accounts[file_dict[account_uid]].append(file_dict)
-                        file_dict = {'file': file, 'config': flavour_config}
-                    file_dict |= result
-            # then handle the remaining results after the file has been read
-            if account_uid in file_dict:
-                accounts[file_dict[account_uid]].append(file_dict)
-            else:
-                accounts[''].append(file_dict)
+            lines_reader = LinesReader(fd)
+
+        file_dict = {'file': file, 'config': flavour_config}
+        for cfg_line in flavour_config['lines']:
+            if cfg_line['type'] == 'match':
+                result = parse_match(lines_reader, cfg_line)
+            elif cfg_line['type'] == 'csv':
+                result = parse_csv(lines_reader, cfg_line)
+            if result:  # we consider each config line optional
+                # handling the presence of multiple accounts in the same
+                # file but differentiating them by name
+                if (account_uid in result
+                        and account_uid in file_dict
+                        and result[account_uid] != file_dict[account_uid]):
+                    accounts[file_dict[account_uid]].append(file_dict)
+                    file_dict = {'file': file, 'config': flavour_config}
+                file_dict |= result
+        # then handle the remaining results after the file has been read
+        if account_uid in file_dict:
+            accounts[file_dict[account_uid]].append(file_dict)
+        else:
+            accounts[''].append(file_dict)
 
     clean_accounts(accounts, flavour_config)
     logging.debug(yaml.dump(accounts))
@@ -93,9 +95,12 @@ def read_input_statements(files_list, flavour):
     return accounts
 
 
-def parse_match(fd, cfg, max_read):
+def parse_match(lr, cfg):
 
-    last_pos, next_line = skip_empty_lines(fd, max_read)
+    try:
+        next_line = next(lr)
+    except StopIteration:
+        return {}
 
     # try to match line with pattern
     result = re.fullmatch(cfg['pattern'], next_line)
@@ -105,7 +110,7 @@ def parse_match(fd, cfg, max_read):
         else:
             return result.groupdict()
     else:  # put back the line on the heap if it doesn't match
-        fd.seek(last_pos)
+        lr.step_back()
         return {}
 
 
@@ -116,53 +121,46 @@ class LinesReader:
     We need this wrapper because csv.DictReader resp. 'next()' blocks
     the usage of fd.tell() which we need to step back
     """
-    def __init__(self, fd, max_read):
-        self.fd = fd
-        self.last_pos = self.next_pos = fd.tell()
-        self.max_read = max_read
+    def __init__(self, fd):
+        self.lines = list(x.strip() for x in fd.readlines())
+        self.max = len(self.lines)
+        self.line = -1
 
     def __next__(self):
-        last_pos = self.fd.tell()
-        # Workaround because fd.readline stays stuck at the EOF
-        if last_pos >= self.max_read:
-            if last_pos > TWO_POW_64:
-                self.last_pos = last_pos - TWO_POW_64
-            else:
-                self.last_pos = self.next_pos
-            raise StopIteration
+        self.line += 1
+        while self.line < self.max and not self.lines[self.line]:
+            self.line += 1
+        if self.line < self.max:
+            return self.lines[self.line]
         else:
-            self.last_pos = last_pos
-        line = self.fd.readline()
-        # part of the workaround because read seeks beyond 2**64
-        self.next_pos = self.last_pos + len(line)
-        return line
+            raise StopIteration
 
     def __iter__(self):
         return self
 
-    def close(self):
-        self.fd.seek(self.last_pos)
+    def step_back(self, back=1):
+        self.line -= back
 
-
-def parse_csv(fd, cfg, max_read):
+def parse_csv(lr, cfg):
 
     transactions = []
-    last_pos, next_line = skip_empty_lines(fd, max_read)
+    try:
+        next_line = next(lr)
+    except StopIteration:
+        return {}
     header_reader = csv.reader((next_line,), **cfg['dialect'])
     for header in header_reader:
         pass  # there is only one line
-    lines_reader = LinesReader(fd, max_read)
-    reader = csv.DictReader(lines_reader, header, **cfg['dialect'])
+    reader = csv.DictReader(lr, header, **cfg['dialect'])
     for row in reader:
         if None in row or row[header[-1]] is None:
             # the line didn't parse correctly, end of the csv...
+            lr.step_back()
             break
         else:
             if 'map' in cfg:
                 row |= map_fields(row, cfg['map'])
             transactions.append(row)
-
-    lines_reader.close()
 
     if cfg.get('skip', False):
         return {}
@@ -305,17 +303,6 @@ def clean_value(key, value, cfg):
         return cfg['payment_types'].get(value, value)
 
     return value
-
-
-def skip_empty_lines(fd, max_read):
-
-    # skip any empty line
-    last_pos = fd.tell()
-    next_line = fd.readline().strip()
-    while (not next_line) and last_pos < max_read:
-        last_pos = fd.tell()
-        next_line = fd.readline().strip()
-    return last_pos, next_line
 
 
 def combine_statement_files(statement):
