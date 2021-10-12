@@ -1,5 +1,4 @@
-= bookiemoney
-a simple bookkeeper tool for your money
+= bookiemoney: a simple bookkeeper tool for your money
 
 == Introduction
 
