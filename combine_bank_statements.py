@@ -52,7 +52,7 @@ def read_input_statements(files_list, flavour):
         logging.info("Reading input file '{fi}'".format(fi=file))
 
         # the extension of the file gives us the file type
-        extension = os.path.splitext(file)[1].lstrip('.')
+        extension = os.path.splitext(file)[1].lstrip('.').lower()
 
         # we read accordingly the flavour's configuration file
         flavour_file = os.path.join('in', extension, flavour + '.yml')
@@ -355,7 +355,7 @@ def output_combined_statement(statement, out_file, key, flavour):
         out_file = out_file.format(key)
 
     # the extension of the file gives us the file type
-    extension = os.path.splitext(out_file)[1].lstrip('.')
+    extension = os.path.splitext(out_file)[1].lstrip('.').lower()
 
     # we read the flavour's configuration file
     flavour_file = os.path.join('out', extension, flavour + '.yml')
