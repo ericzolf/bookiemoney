@@ -33,6 +33,10 @@ If the flavours offered by default aren't sufficient, you can of course create y
 
 TIP: name them something like `xxx_myown.yml` so that they're ignored by Git, unless you want to offer them as standard type.
 
+== Plugging gaps
+
+If you expect to have "holes" in your statements because transactions are missing and the balance "jumps", the option `--plug-gaps` can be used to create transactions to close those gaps.
+
 == Logging
 
 If you want to get more (or less) information about what's going on while processing the files, use the `--loglevel` parameter followed by one of DEBUG, INFO, WARNING, ERROR or CRITICAL.

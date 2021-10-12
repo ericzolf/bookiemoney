@@ -19,6 +19,8 @@ CURRENCY_MAP = {babelnum.get_currency_symbol(x): x
 
 TWO_POW_64 = 2**64
 
+DAILY_TRANSACTIONS = 10000
+
 def parse_arguments():
     parser = argparse.ArgumentParser(
         description='Combine multiple bank statements into one file')
@@ -28,6 +30,8 @@ def parse_arguments():
                         help='type of the account statement [mandatory]')
     parser.add_argument('--flavour-out', required=True,
                         help='type of the output file [mandatory]')
+    parser.add_argument('--plug-gaps', action=argparse.BooleanOptionalAction,
+                        help='plug gaps in balance between transactions')
     parser.add_argument('inputs', nargs='+', metavar='statements',
                         help='one or more input statement files')
     parser.add_argument(
@@ -339,7 +343,8 @@ class TransactionUid():
         self.datenr = 0
 
     def __call__(self, tdate):
-        datenr = (tdate.year * 10000 + tdate.month * 100 + tdate.day) * 10000
+        datenr = DAILY_TRANSACTIONS * (
+            tdate.year * 10000 + tdate.month * 100 + tdate.day)
         if datenr == self.datenr:
             self.index += 1
         else:
@@ -348,7 +353,7 @@ class TransactionUid():
         return datenr + 10 * self.index
 
 
-def output_combined_statement(statement, out_file, key, flavour):
+def output_combined_statement(statement, out_file, key, flavour, plug_gaps):
 
     # an output file can have a placeholder for the key
     if "{}" in out_file:
@@ -365,6 +370,9 @@ def output_combined_statement(statement, out_file, key, flavour):
     # normalize values to a list
     normalize_fields(flavour_config['fields'])
     fields = list(flavour_config['fields'].keys())
+
+    if plug_gaps:
+        statement = plug_gaps_in_statement(statement)
 
     logging.info("Writing {tr} transactions to output file '{of}'".format(
         tr=len(statement), of=out_file))
@@ -389,13 +397,14 @@ def output_combined_statement(statement, out_file, key, flavour):
             logging.debug(row)
             writer.writerow(row)
 
-    
+
 def normalize_fields(fields):
     for key in fields:
         if fields[key] is None:
             fields[key] = {'value': ['$' + key, '']}
         if not isinstance(fields[key]['value'], list):
             fields[key]['value'] = (fields[key]['value'],)
+
 
 def get_field_value(field, transaction, field_map, locale=None):
     ret_value = None
@@ -440,6 +449,37 @@ def get_locale_currency_code(given_locale=None):
     return currency
 
 
+def plug_gaps_in_statement(statement):
+    old_balance = old_uid = 0
+    gaps = {}
+    for uid in statement:
+        new_balance = statement[uid]['transaction_balance_amount']
+        gap_amount = new_balance - (
+            old_balance + statement[uid]['transaction_amount'])
+        if gap_amount != 0:
+            gap_uid = uid - uid % DAILY_TRANSACTIONS - 1
+            logging.warning(
+                "Adding gap plugging transaction '{gt}' of amount {ga} "
+                "between old transaction '{ot}' and new one '{nt}'".format(
+                    gt=gap_uid, ga=gap_amount, ot=old_uid, nt=uid))
+            gaps[gap_uid] = {
+                'transaction_uid': gap_uid,
+                'transaction_amount': gap_amount,
+                'transaction_currency': statement[uid]['transaction_currency'],
+                'transaction_balance_amount': old_balance + gap_amount,
+                'transaction_balance_currency': statement[uid][
+                    'transaction_balance_currency'],
+                'transaction_payment_type': 'plug_gap',
+                'transaction_details' : "PLUG GAP between {ot} and {nt}".format(
+                    ot=old_uid, nt=uid)
+            }
+        old_uid = uid
+        old_balance = new_balance
+
+    # we return a properly sorted dictionary
+    return dict(sorted((statement | gaps).items()))
+
+
 # MAIN
 
 args = parse_arguments()
@@ -466,4 +506,5 @@ if len(account_statements) > 1 and '{}' not in args.out:
 for key in account_statements:
     logging.info("Handling account '{ac}'".format(ac=key))
     statement = combine_statement_files(account_statements[key])
-    output_combined_statement(statement, args.out, key, args.flavour_out)
+    output_combined_statement(statement, args.out, key,
+                              args.flavour_out, args.plug_gaps)
