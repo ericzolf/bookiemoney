@@ -1,0 +1,12 @@
+= Flavours configuration
+
+Flavours configuration files are in YAML format.
+They describe how to parse (input) or generate (output) a file of a specific type (currently only CSV, though TSV would be simple to add).
+
+== Input flavour
+
+TBD
+
+== Output flavour
+
+TBD

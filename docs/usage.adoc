@@ -1,0 +1,41 @@
+= Usage of bookiemoney
+
+== Basic usage
+
+The most obvious way to start using bookiemoney is to call this script without any argument:
+
+----
+./combine_bank_statements.py
+----
+
+This gives you a minimal help.
+The parameters `-h` resp. `--help` do give you more help.
+
+A typical usage is the following, allowing you to combine multiple input files into one output file:
+
+----
+./combine_bank_statements.py \
+	--out output_file.extO \
+	--flavour-in input_flavour \
+	--flavour-out output_flavour \
+	input_file_1.extI input_file_2.extI [...]
+----
+
+The flavours are to be found in the current directory, under the sub-directories `in` for input and `out` for output.
+In these directories, the extension of each file is used to identify the file type, e.g. `csv`, finally followed by the flavour's configuration as YAML file.
+
+In our example, the output flavour configuration file would be expected under `out/extO/output_flavour.yml`, and the input one under `in/extI/input_flavour.yml`.
+
+NOTE: theoretically, even the input files could have different types, but currently only the CSV (Comma Separated Values) file type is supported.
+A TSV (Tab Separated Values) file type sometimes encountered could be configured without issue.
+
+If the flavours offered by default aren't sufficient, you can of course create your own ones.
+
+TIP: name them something like `xxx_myown.yml` so that they're ignored by Git, unless you want to offer them as standard type.
+
+== Logging
+
+If you want to get more (or less) information about what's going on while processing the files, use the `--loglevel` parameter followed by one of DEBUG, INFO, WARNING, ERROR or CRITICAL.
+You'll then get only messages of this and higher criticality, the default being WARNING.
+
+You can use the `--logfile` option to redirect all the output to a logfile of your choice.

@@ -1,0 +1,26 @@
+= Installation of bookiemoney
+
+There is currently not much installation to be done, just download the code and unpack it somewhere, either using one of the following two commands:
+
+.Git clone the source code repository
+----
+git clone https://github.com/ericzolf/bookiemoney.git
+git clone git@github.com:ericzolf/bookiemoney.git
+----
+
+or by downloading an archive of the repository, e.g. at
+https://github.com/ericzolf/bookiemoney/archive/refs/heads/main.zip
+
+You'll also need Python 3 (probably 3.9 or newer) and the following Python modules:
+
+* PyYAML
+* Babel
+
+NOTE: they're available under Fedora as package `python3-pyyaml` and `python3-babel`.
+
+You're then ready to use bookiemoney directly from the source code directory.
+If you can call the following and get some help, you're probably good to go:
+
+----
+[bookiemoney]$ ./combine_bank_statements.py --help
+----

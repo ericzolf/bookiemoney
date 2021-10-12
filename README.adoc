@@ -1,6 +1,5 @@
 = bookiemoney
-
-A simple bookkeeper tool for your money
+a simple bookkeeper tool for your money
 
 == Introduction
 
@@ -22,6 +21,17 @@ It's work in progress but my idea is to have:
 . recognizing if some entries are missing (the balance jumps between two entries) and entering "gap" entries to compensate
 
 In a 2nd step, I might think about consolidating all these bank specific files into one big database, recognizing and "linking" transfers between accounts.
+
+== Documentation
+
+The usage of `combine_bank_statements.py` should be pretty straight-forward after you've called it once with `--help`.
+This said, there is all kind of documentation under link:docs/[the documentation folder].
+
+include::docs/installation.adoc[leveloffset=+2]
+
+include::docs/usage.adoc[leveloffset=+2]
+
+include::docs/flavours.adoc[leveloffset=+2]
 
 == See also
 
