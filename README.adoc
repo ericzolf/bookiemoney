@@ -34,7 +34,7 @@ include::docs/flavours.adoc[leveloffset=+2]
 
 == See also
 
-I'm not sure how and when BookieMoney will ever become something usable, so you are probably better of looking at those more advanced banking projects:
+I'm not sure how and when bookiemoney will ever become something usable for the broad masses, so you are probably better off looking at those more advanced banking projects:
 
 - http://skrooge.org[Skrooge]
 - https://gnucash.org/[GnuCash]
