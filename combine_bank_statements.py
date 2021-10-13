@@ -224,10 +224,12 @@ def clean_accounts(accounts, flavour_config):
                 if file_key != 'transactions':
                     file[file_key] = clean_value(file_key, file[file_key],
                                                  flavour_config)
+            account_uid = file[flavour_config['identifier']]
             for line in file['transactions']:
                 for field in line:
                     line[field] = clean_value(field, line[field],
                                               flavour_config)
+                line['transaction_account_uid'] = account_uid
                 # it would be nicer to have it configurable but I couldn't find
                 # a simple way to express it
                 # basically, some banks/tools only consider a counterpart and
@@ -463,6 +465,8 @@ def plug_gaps_in_statement(statement):
                 "between old transaction '{ot}' and new one '{nt}'".format(
                     gt=gap_uid, ga=gap_amount, ot=old_uid, nt=uid))
             gaps[gap_uid] = {
+                'transaction_account_uid': statement[uid][
+                    'transaction_account_uid'],
                 'transaction_uid': gap_uid,
                 'transaction_amount': gap_amount,
                 'transaction_currency': statement[uid]['transaction_currency'],

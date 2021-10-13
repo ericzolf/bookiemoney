@@ -5,6 +5,7 @@ dialect: unix  # can also be a dialect dictionary
 header: true  # default is true
 
 fields:
+  transaction_account_uid:
   transaction_uid:
   transaction_date:
   transaction_booking_date:
