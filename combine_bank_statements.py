@@ -250,6 +250,12 @@ def clean_accounts(accounts, flavour_config):
                     elif 'transaction_presenter_name' in line:
                         line['transaction_counterpart_name'] = line[
                             'transaction_presenter_name']
+                    elif 'transaction_receiver_name' in line:
+                        line['transaction_counterpart_name'] = line[
+                            'transaction_receiver_name']
+                    elif 'transaction_originator_name' in line:
+                        line['transaction_counterpart_name'] = line[
+                            'transaction_originator_name']
                 if 'transaction_currency' not in line:
                     line['transaction_currency'] = default_currency
                 if 'transaction_balance_currency' not in line:
