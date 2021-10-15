@@ -69,8 +69,7 @@ def read_input_statements(files_list, flavour):
         file_size = os.path.getsize(file)
 
         # then we match the config line by line with the statement's content
-        with open(file, mode='r', encoding=flavour_config['encoding']) as fd:
-            lines_reader = LinesReader(fd)
+        lines_reader = LinesReader(file, flavour_config['encoding'])
 
         file_dict = {'file': file, 'config': flavour_config}
         for cfg_line in flavour_config['lines']:
@@ -125,8 +124,9 @@ class LinesReader:
     We need this wrapper because csv.DictReader resp. 'next()' blocks
     the usage of fd.tell() which we need to step back
     """
-    def __init__(self, fd):
-        self.lines = list(x.strip() for x in fd.readlines())
+    def __init__(self, file, encoding):
+        with open(file, mode='r', encoding=encoding) as fd:
+            self.lines = list(x.strip() for x in fd.readlines())
         self.max = len(self.lines)
         self.line = -1
 
