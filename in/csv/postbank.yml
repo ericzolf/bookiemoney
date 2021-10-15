@@ -69,22 +69,25 @@ lines:
     pattern:
     - "DANKE, SAGT (?P<transaction_originator_name>.*)"
     - "(?P<transaction_originator_name>.*) SAGT DANKE.*"
+    - "(?P<transaction_originator_name>.*) DANKT FUER.*"
     - "(?P<transaction_originator_name>.*)"
   - key: Empfänger
     pattern: "(?P<transaction_payment_card>V PAY|Lastschrift aus Kartenzahlung)"
     then:
     - key: Buchungsdetails
-      pattern: "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..)(?P<transaction_details>.*)"
+      pattern: "Referenz *(?P<transaction_reference>.*) *Mandat (?P<transaction_mandate>.*) *Einreicher-ID *(?P<transaction_presenter_id>.{18}) *(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..) *(?P<transaction_details>.*)"
     else:
     - key: Buchungsdetails
       pattern:
-      - "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..)(?P<transaction_details>.*)"
-      - "Referenz (?P<transaction_reference>.*)Mandat (?P<transaction_mandate>.*)Einreicher-ID (?P<transaction_presenter_id>.{18})(?P<transaction_details>.*)"
+      - "Referenz *(?P<transaction_reference>.*) *Mandat (?P<transaction_mandate>.*) *Einreicher-ID *(?P<transaction_presenter_id>.{18}) *(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..) *(?P<transaction_details>.*)"
+      - "Referenz *(?P<transaction_reference>.*) *Mandat (?P<transaction_mandate>.*) *Einreicher-ID *(?P<transaction_presenter_id>.{18}) *(?P<transaction_details>.*)"
+      - "Referenz *(?P<transaction_reference>.*) *Verwendungszweck *(?P<transaction_details>.*)"
       - "(?P<transaction_details>.*)"
     - key: Empfänger
       pattern:
       - "DANKE, SAGT (?P<transaction_receiver_name>.*)"
       - "(?P<transaction_receiver_name>.*) SAGT DANKE.*"
+      - "(?P<transaction_receiver_name>.*) DANKT FUER.*"
       - "(?P<transaction_receiver_name>.*)"
   - key: Betrag (€)
     pattern: "(?P<transaction_amount>.*) (?P<transaction_currency>.)"

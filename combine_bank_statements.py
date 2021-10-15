@@ -216,10 +216,13 @@ def clean_accounts(accounts, flavour_config):
                 continue
             logging.info("Cleaning account file '{af}'".format(
                 af=os.path.basename(file['file'])))
-            default_currency = file.get('account_currency',
-                                        flavour_config.get('currency',
-                                        get_locale_currency_code(
-                                            flavour_config.get('locale'))))
+            default_currency = clean_value(
+                'account_currency',
+                file.get('account_currency',
+                         flavour_config.get(
+                            'currency', get_locale_currency_code(
+                                flavour_config.get('locale')))),
+                flavour_config)
             for file_key in file:
                 if file_key != 'transactions':
                     file[file_key] = clean_value(file_key, file[file_key],
@@ -474,6 +477,7 @@ def plug_gaps_in_statement(statement):
                 'transaction_balance_currency': statement[uid][
                     'transaction_balance_currency'],
                 'transaction_payment_type': 'plug_gap',
+                'transaction_counterpart_name': 'plug_gap',
                 'transaction_details' : "PLUG GAP between {ot} and {nt}".format(
                     ot=old_uid, nt=uid)
             }
