@@ -47,7 +47,7 @@ lines:
   - key: Umsatz in EUR
     pattern: "(?P<transaction_amount>.*)"
 - type: match
-  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+  pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
   pattern: '"Umsätze (?P<account_name>Visa.*) ?";"Zeitraum: .*";'
@@ -84,7 +84,7 @@ lines:
   - key: Umsatz in EUR
     pattern: "(?P<transaction_amount>.*)"
 - type: match
-  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+  pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
   pattern: '"Umsätze (?P<account_name>Tagesgeld.*) ?";"Zeitraum: .*";'
@@ -115,7 +115,7 @@ lines:
   - key: Umsatz in EUR
     pattern: "(?P<transaction_amount>.*)"
 - type: match
-  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+  pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
   pattern: '"Umsätze (?P<account_name>Depot.*) ?";"Zeitraum: .*";'
@@ -150,6 +150,6 @@ lines:
   - key: Umsatz in EUR
     pattern: "(?P<transaction_amount>.*)"
 - type: match
-  pattern: '"Alter Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
+  pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 ...
