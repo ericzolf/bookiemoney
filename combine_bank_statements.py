@@ -42,58 +42,47 @@ def parse_arguments():
     return parser.parse_args()
 
 
-def read_input_statements(files_list, flavour):
+def read_input_statement(file, flavour):
 
-    # this is a dictionary of lists, where each key is an account with a list
-    # of file contents, something like:
-    # accounts = {
-    #   'account1': [file1, file3],
-    #   'account2': [file2, file3],
-    # }
-    accounts = collections.defaultdict(list)
+    # this is a dictionary of lists, where each key is an account ID
+    # and the value is a dictionary describing the file
+    accounts = {}
 
-    for file in files_list:
-        logging.info("Reading input file '{fi}'".format(fi=file))
+    logging.info("Reading input file '{fi}'".format(fi=file))
 
-        # the extension of the file gives us the file type
-        extension = os.path.splitext(file)[1].lstrip('.').lower()
+    # the extension of the file gives us the file type
+    extension = os.path.splitext(file)[1].lstrip('.').lower()
 
-        # we read accordingly the flavour's configuration file
-        flavour_file = os.path.join('in', extension, flavour + '.yml')
-        with open(flavour_file, mode='r') as yfd:
-            flavour_config = yaml.safe_load(yfd)
+    # we read accordingly the flavour's configuration file
+    flavour_file = os.path.join('in', extension, flavour + '.yml')
+    with open(flavour_file, mode='r') as yfd:
+        flavour_config = yaml.safe_load(yfd)
 
-        account_uid = flavour_config['identifier']
+    account_uid = flavour_config['identifier']
 
-        # Workaround because fd.readline stays stuck at the EOF
-        file_size = os.path.getsize(file)
+    # then we match the config line by line with the statement's content
+    lines_reader = LinesReader(file, flavour_config['encoding'])
 
-        # then we match the config line by line with the statement's content
-        lines_reader = LinesReader(file, flavour_config['encoding'])
-
-        file_dict = {'file': file, 'config': flavour_config}
-        for cfg_line in flavour_config['lines']:
-            if cfg_line['type'] == 'match':
-                result = parse_match(lines_reader, cfg_line)
-            elif cfg_line['type'] == 'csv':
-                result = parse_csv(lines_reader, cfg_line)
-            if result:  # we consider each config line optional
-                # handling the presence of multiple accounts in the same
-                # file but differentiating them by name
-                if (account_uid in result
-                        and account_uid in file_dict
-                        and result[account_uid] != file_dict[account_uid]):
-                    accounts[file_dict[account_uid]].append(file_dict)
-                    file_dict = {'file': file, 'config': flavour_config}
-                file_dict |= result
-        # then handle the remaining results after the file has been read
-        if account_uid in file_dict:
-            accounts[file_dict[account_uid]].append(file_dict)
-        else:
-            accounts[''].append(file_dict)
-
-    clean_accounts(accounts, flavour_config)
-    logging.debug(yaml.dump(accounts))
+    file_dict = {'file': file, 'flavour': flavour_config}
+    for cfg_line in flavour_config['lines']:
+        if cfg_line['type'] == 'match':
+            result = parse_match(lines_reader, cfg_line)
+        elif cfg_line['type'] == 'csv':
+            result = parse_csv(lines_reader, cfg_line)
+        if result:  # we consider each config line optional
+            # handling the presence of multiple accounts in the same
+            # file but differentiating them by name
+            if (account_uid in result
+                    and account_uid in file_dict
+                    and result[account_uid] != file_dict[account_uid]):
+                accounts[file_dict[account_uid]] = file_dict
+                file_dict = {'file': file, 'flavour': flavour_config}
+            file_dict |= result
+    # then handle the remaining results after the file has been read
+    if account_uid in file_dict:
+        accounts[file_dict[account_uid]] = file_dict
+    else:
+        accounts[''] = file_dict
 
     return accounts
 
@@ -204,107 +193,109 @@ def map_fields(fields_dict, map_cfg):
     return parsed_dict
 
 
-def clean_accounts(accounts, flavour_config):
-    for account_key in accounts:
-        logging.info("Cleaning account '{ac}'".format(ac=account_key))
-        for file in accounts[account_key]:
-            if not file['transactions']:
-                logging.warning(
-                    "Account file '{af}' didn't contain transations "
-                    "for account '{ac}'".format(
-                        af=os.path.basename(file['file']), ac=account_key))
-                continue
-            logging.info("Cleaning account file '{af}'".format(
-                af=os.path.basename(file['file'])))
-            default_currency = clean_value(
-                'account_currency',
-                file.get('account_currency',
-                         flavour_config.get(
-                            'currency', get_locale_currency_code(
-                                flavour_config.get('locale')))),
-                flavour_config)
-            for file_key in file:
-                if file_key != 'transactions':
-                    file[file_key] = clean_value(file_key, file[file_key],
-                                                 flavour_config)
-            account_uid = file[flavour_config['identifier']]
-            for line in file['transactions']:
-                for field in line:
-                    line[field] = clean_value(field, line[field],
-                                              flavour_config)
-                line['transaction_account_uid'] = account_uid
-                # it would be nicer to have it configurable but I couldn't find
-                # a simple way to express it
-                # basically, some banks/tools only consider a counterpart and
-                # don't document between account owner and counterpart,
-                # who is the originator resp. the receiver
-                if 'transaction_counterpart_name' not in line:
-                    if ('transaction_originator_name' in line
-                            and 'transaction_receiver_name' in line):
-                        if line['transaction_amount'] > 0:
-                            line['transaction_counterpart_name'] = line[
-                                'transaction_originator_name']
-                        else:
-                            line['transaction_counterpart_name'] = line[
-                                'transaction_receiver_name']
-                    elif 'transaction_presenter_name' in line:
-                        line['transaction_counterpart_name'] = line[
-                            'transaction_presenter_name']
-                    elif 'transaction_receiver_name' in line:
-                        line['transaction_counterpart_name'] = line[
-                            'transaction_receiver_name']
-                    elif 'transaction_originator_name' in line:
+def clean_account_statement(account_uid, account_statement):
+        account_file = os.path.basename(account_statement['file'])
+        flavour_config = account_statement['flavour']
+
+        if not account_statement['transactions']:
+            logging.warning(
+                "Account file '{af}' didn't contain transactions "
+                "for account '{ac}'".format(af=account_file, ac=account_uid))
+            return account_statement
+        else:
+            logging.info(
+                "Cleaning account file '{af}' for account '{ac}'".format(
+                    af=account_file, ac=account_uid))
+        # determine the default currency from, in decreasing order of priority:
+        # 1. the file's account currency
+        # 2. the currency defined by the flavour config
+        # 3. the default currency for the locale defined by the flavour config
+        default_currency = clean_value(
+            'account_currency',
+            account_statement.get(
+                'account_currency', flavour_config.get(
+                    'currency', get_locale_currency_code(
+                        flavour_config.get('locale')))),
+            flavour_config)
+        for file_key in account_statement:
+            if file_key != 'transactions':
+                account_statement[file_key] = clean_value(
+                    file_key, account_statement[file_key], flavour_config)
+        account_uid = account_statement[flavour_config['identifier']]
+        for line in account_statement['transactions']:
+            for field in line:
+                line[field] = clean_value(field, line[field],
+                                          flavour_config)
+            line['transaction_account_uid'] = account_uid
+            # it would be nicer to have it configurable but I couldn't find
+            # a simple way to express it
+            # basically, some banks/tools only consider a counterpart and
+            # don't document between account owner and counterpart,
+            # who is the originator resp. the receiver
+            if 'transaction_counterpart_name' not in line:
+                if ('transaction_originator_name' in line
+                        and 'transaction_receiver_name' in line):
+                    if line['transaction_amount'] > 0:
                         line['transaction_counterpart_name'] = line[
                             'transaction_originator_name']
-                if 'transaction_currency' not in line:
-                    line['transaction_currency'] = default_currency
-                if 'transaction_balance_currency' not in line:
-                    line['transaction_balance_currency'] = default_currency
+                    else:
+                        line['transaction_counterpart_name'] = line[
+                            'transaction_receiver_name']
+                elif 'transaction_presenter_name' in line:
+                    line['transaction_counterpart_name'] = line[
+                        'transaction_presenter_name']
+                elif 'transaction_receiver_name' in line:
+                    line['transaction_counterpart_name'] = line[
+                        'transaction_receiver_name']
+                elif 'transaction_originator_name' in line:
+                    line['transaction_counterpart_name'] = line[
+                        'transaction_originator_name']
+            if 'transaction_currency' not in line:
+                line['transaction_currency'] = default_currency
+            if 'transaction_balance_currency' not in line:
+                line['transaction_balance_currency'] = default_currency
 
-                # same principle, not all banks make the difference between
-                # booking and value dates
-                if 'transaction_date' not in line:
-                    if 'transaction_value_date' in line:
-                        line['transaction_date'] = line[
-                            'transaction_booking_date']
-                    else:  # it's better to fail here so we don't check
-                        line['transaction_date'] = line[
-                            'transaction_value_date']
+            # same principle, not all banks make the difference between
+            # booking and value dates
+            if 'transaction_date' not in line:
+                if 'transaction_value_date' in line:
+                    line['transaction_date'] = line[
+                        'transaction_booking_date']
+                else:  # it's better to fail here so we don't check
+                    line['transaction_date'] = line[
+                        'transaction_value_date']
 
-            # if no transactions were found in this file, we're finished with it
-            if not file['transactions']:
-                logging.warning("There is no transaction in file '{fi}'".format(
-                    fi=os.path.basename(file['file'])))
-                logging.debug(file)
-                continue
+        # the new account balance value is the balance value of the last
+        # transaction in the file
+        if ('transaction_balance_amount'
+                not in account_statement['transactions'][-1]
+                and 'account_new_balance_amount' in account_statement):
+            oldline = account_statement['transactions'][-1]
+            oldline['transaction_balance_amount'] = account_statement[
+                'account_new_balance_amount']
+            for line in account_statement['transactions'][-2::-1]:
+                if 'transaction_balance_amount' not in line:
+                    line['transaction_balance_amount'] = (
+                            oldline['transaction_balance_amount']
+                            - oldline['transaction_amount'])
+                oldline = line
+        # the old account balance value is the balance value _before_
+        # the first transaction in the file
+        elif ('transaction_balance_amount'
+                not in account_statement['transactions'][0]
+                and 'account_old_balance_amount' in account_statement):
+            oldline = account_statement['transactions'][0]
+            oldline['transaction_balance_amount'] = (
+                    account_statement['account_old_balance_amount']
+                    + oldline['transaction_amount'])
+            for line in account_statement['transactions'][1:]:
+                if 'transaction_balance_amount' not in line:
+                    line['transaction_balance_amount'] = (
+                            oldline['transaction_balance_amount']
+                            + line['transaction_amount'])
+                oldline = line
 
-            # the new account balance value is the balance value of the last
-            # transaction in the file
-            if ('transaction_balance_amount' not in file['transactions'][-1]
-                    and 'account_new_balance_amount' in file):
-                oldline = file['transactions'][-1]
-                oldline['transaction_balance_amount'] = file[
-                    'account_new_balance_amount']
-                for line in file['transactions'][-2::-1]:
-                    if 'transaction_balance_amount' not in line:
-                        line['transaction_balance_amount'] = (
-                                oldline['transaction_balance_amount']
-                                - oldline['transaction_amount'])
-                    oldline = line
-            # the old account balance value is the balance value _before_
-            # the first transaction in the file
-            elif ('transaction_balance_amount' not in file['transactions'][0]
-                    and 'account_old_balance_amount' in file):
-                oldline = file['transactions'][0]
-                oldline['transaction_balance_amount'] = (
-                        file['account_old_balance_amount']
-                        + oldline['transaction_amount'])
-                for line in file['transactions'][1:]:
-                    if 'transaction_balance_amount' not in line:
-                        line['transaction_balance_amount'] = (
-                                oldline['transaction_balance_amount']
-                                + line['transaction_amount'])
-                    oldline = line
+        return account_statement
 
 
 def clean_value(key, value, cfg):
@@ -506,7 +497,17 @@ if args.loglevel:
     else:
         logging.basicConfig(level=num_loglevel)
 
-account_statements = read_input_statements(args.inputs, args.flavour_in)
+# read the files, clean them and split them into individual accounts
+account_statements = {}
+for file_in in args.inputs:
+    accounts = read_input_statement(file_in, args.flavour_in)
+    for account_key in accounts:
+        if account_key in account_statements:
+            account_statements[account_key].append(
+                clean_account_statement(account_key, accounts[account_key]))
+        else:
+            account_statements[account_key] = [
+                clean_account_statement(account_key, accounts[account_key]),]
 
 # make sure we detect if output files could get overwritten
 if len(account_statements) > 1 and '{}' not in args.out:
