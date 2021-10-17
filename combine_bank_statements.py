@@ -7,19 +7,23 @@ import collections
 import csv
 import locale
 import logging
+import multiprocessing
 import os
 import re
 import sys
 import yaml
 
 
+# Babel doesn't offer the function to get the 3 letters code from a 
+# currency symbol, so we need to do it ourselves
 CURRENCY_MAP = {babelnum.get_currency_symbol(x): x
                 for x in babelnum.list_currencies()
                 if x != babelnum.get_currency_symbol(x)}
 
-TWO_POW_64 = 2**64
-
+# maximum possible number of transactions each day
 DAILY_TRANSACTIONS = 10000
+# identifier for accounts without identifier
+NO_ACCOUNT_UID = 'NOIDENTIFIER'
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -75,14 +79,16 @@ def read_input_statement(file, flavour):
             if (account_uid in result
                     and account_uid in file_dict
                     and result[account_uid] != file_dict[account_uid]):
-                accounts[file_dict[account_uid]] = file_dict
+                file_dict['account_uid'] = file_dict[account_uid]
+                accounts[file_dict['account_uid']] = file_dict
                 file_dict = {'file': file, 'flavour': flavour_config}
             file_dict |= result
     # then handle the remaining results after the file has been read
     if account_uid in file_dict:
-        accounts[file_dict[account_uid]] = file_dict
+        file_dict['account_uid'] = file_dict[account_uid]
     else:
-        accounts[''] = file_dict
+        file_dict['account_uid'] = NO_ACCOUNT_UID
+    accounts[file_dict['account_uid']] = file_dict
 
     return accounts
 
@@ -193,9 +199,10 @@ def map_fields(fields_dict, map_cfg):
     return parsed_dict
 
 
-def clean_account_statement(account_uid, account_statement):
+def clean_account_statement(account_statement):
         account_file = os.path.basename(account_statement['file'])
         flavour_config = account_statement['flavour']
+        account_uid = account_statement['account_uid']
 
         if not account_statement['transactions']:
             logging.warning(
@@ -221,7 +228,6 @@ def clean_account_statement(account_uid, account_statement):
             if file_key != 'transactions':
                 account_statement[file_key] = clean_value(
                     file_key, account_statement[file_key], flavour_config)
-        account_uid = account_statement[flavour_config['identifier']]
         for line in account_statement['transactions']:
             for field in line:
                 line[field] = clean_value(field, line[field],
@@ -313,6 +319,10 @@ def clean_value(key, value, cfg):
 
 def combine_statement_files(statement):
     clean_statement = {}
+    # all statement files must have the same account unique ID, hence we take
+    # the first one
+    logging.info("Handling account '{ac}'".format(
+        ac=statement[0]['account_uid']))
 
     for file in statement:
         logging.info(
@@ -355,11 +365,19 @@ class TransactionUid():
         return datenr + 10 * self.index
 
 
-def output_combined_statement(statement, out_file, key, flavour, plug_gaps):
+def output_statement_files(statement_files, out_file, flavour, plug_gaps):
+    transactions = combine_statement_files(statement_files)
+    output_combined_statement(transactions, out_file, flavour, plug_gaps)
 
-    # an output file can have a placeholder for the key
+
+def output_combined_statement(statement, out_file, flavour, plug_gaps):
+
+    # an output file can have a placeholder for the account unique ID
     if "{}" in out_file:
-        out_file = out_file.format(key)
+        # all transactions must have the same account UID so we don't care
+        # and take the first one
+        out_file = out_file.format(
+            next(iter(statement.values()))['transaction_account_uid'])
 
     # the extension of the file gives us the file type
     extension = os.path.splitext(out_file)[1].lstrip('.').lower()
@@ -497,17 +515,26 @@ if args.loglevel:
     else:
         logging.basicConfig(level=num_loglevel)
 
+# create a list of input_parameters we can use with pool.starmap
+input_parameters = list((x, args.flavour_in) for x in args.inputs)
+
+logging.debug("Input parameters are '{ip}'".format(ip=input_parameters))
+
 # read the files, clean them and split them into individual accounts
+with multiprocessing.Pool() as pool:
+    accounts = pool.starmap(read_input_statement, input_parameters)
+    statements = []
+    for account_file in accounts:
+        statements.extend(account_file.values())
+    clean_statements = pool.map(clean_account_statement, statements)
+
 account_statements = {}
-for file_in in args.inputs:
-    accounts = read_input_statement(file_in, args.flavour_in)
-    for account_key in accounts:
-        if account_key in account_statements:
-            account_statements[account_key].append(
-                clean_account_statement(account_key, accounts[account_key]))
-        else:
-            account_statements[account_key] = [
-                clean_account_statement(account_key, accounts[account_key]),]
+for statement in clean_statements:
+    account_uid = statement['account_uid']
+    if account_uid in account_statements:
+        account_statements[account_uid].append(statement)
+    else:
+        account_statements[account_uid] = [statement,]
 
 # make sure we detect if output files could get overwritten
 if len(account_statements) > 1 and '{}' not in args.out:
@@ -518,8 +545,17 @@ if len(account_statements) > 1 and '{}' not in args.out:
     sys.exit(1)
 
 # there might be more than one account in a file at some banks
-for key in account_statements:
-    logging.info("Handling account '{ac}'".format(ac=key))
-    statement = combine_statement_files(account_statements[key])
-    output_combined_statement(statement, args.out, key,
-                              args.flavour_out, args.plug_gaps)
+with multiprocessing.Pool() as pool:
+    statement_parameters = list(
+        (statement, args.out, args.flavour_out, args.plug_gaps)
+        for statement in account_statements.values())
+    result = pool.starmap_async(output_statement_files, statement_parameters)
+    result.wait()
+if result.successful():
+    logging.info("Everything went well, "
+                 "{cs} combined statement file(s) written".format(
+                     cs=len(statement_parameters)))
+    sys.exit(0)
+else:
+    logging.error("Something went wrong, check previous errors")
+    sys.exit(1)
