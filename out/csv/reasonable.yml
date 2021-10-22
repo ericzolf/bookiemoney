@@ -1,0 +1,28 @@
+---
+name: reasonable subset of fields
+type: csv
+dialect: unix  # can also be a dialect dictionary
+header: true  # default is true
+
+fields:
+  transaction_account_uid:
+  transaction_uid:
+  transaction_date:
+  transaction_value_date:
+  transaction_payment_type:
+  transaction_counterpart_name:
+  transaction_reference:
+  transaction_mandate:
+  transaction_presenter_id:
+  transaction_city:
+  transaction_country_code:
+  transaction_details:
+  transaction_amount:
+  transaction_currency:
+  transaction_balance_amount:
+  transaction_balance_currency:
+  transaction_paper_quantity:
+  transaction_paper_name:
+  transaction_paper_id:
+  transaction_paper_currency:
+  transaction_paper_amount:
