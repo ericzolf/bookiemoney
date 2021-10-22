@@ -207,7 +207,7 @@ def parse_csv(lr, cfg):
 
 def map_fields(fields_dict, map_cfg):
     """
-    recursive function to parse fields in a dictionary
+    recursive function to parse fields in a CSV dictionary
 
     parsing is done according to a mapping config
     """
@@ -235,6 +235,17 @@ def map_fields(fields_dict, map_cfg):
 
 
 def clean_account_statement(account_statement):
+    """
+    Clean an account statement and its transactions according to fixed rules
+
+    The main purpose is to make sure that the records fulfil minimal expected
+    requirements:
+    * values like currency, amounts and currency are clean and standardized
+      (see clean_value function)
+    * each transaction has a date, the account's UID, a counterpart name,
+      an amount, and a balance amount, both with currency
+    """
+
     account_file = os.path.basename(account_statement['file'])
     flavour_config = account_statement['flavour']
     account_uid = account_statement['account_uid']
@@ -297,9 +308,10 @@ def clean_account_statement(account_statement):
             line['transaction_balance_currency'] = default_currency
 
         # same principle, not all banks make the difference between
-        # booking and value dates
+        # booking and value dates. We need a value which doesn't jump and
+        # it is the booking date because the value date might be in the past.
         if 'transaction_date' not in line:
-            if 'transaction_value_date' in line:
+            if 'transaction_booking_date' in line:
                 line['transaction_date'] = line[
                     'transaction_booking_date']
             else:  # it's better to fail here so we don't check
@@ -357,7 +369,13 @@ def clean_value(key, value, cfg):
     return value
 
 
-def combine_statement_files(statement):
+def combine_account_statements(statement):
+    """
+    Combine the transactions of multiple statements from the same account
+
+    Return a sorted dictionary of transactions where the key is the unique ID
+    of each transaction
+    """
     clean_statement = {}
     # all statement files must have the same account unique ID, hence we take
     # the first one
@@ -385,7 +403,7 @@ def combine_statement_files(statement):
 
 class TransactionUid():
     """
-    Returns a unique ID for a given account taking a date
+    Callable object returns a unique ID within a given account taking a date
 
     This works under the assumption that the order of the transactions within
     a day remains stable. This is of course only unique within _one_ account.
@@ -405,19 +423,32 @@ class TransactionUid():
         return datenr + 10 * self.index
 
 
-def output_statement_files(statement_files, out_file, flavour, plug_gaps):
-    transactions = combine_statement_files(statement_files)
-    output_combined_statement(transactions, out_file, flavour, plug_gaps)
+def output_account_statements(statements, out_file, flavour, plug_gaps):
+    """
+    Combine all transactions of multiple statements and write them to a file
+    """
+    transactions = combine_account_statements(statements)
+    output_transactions(transactions, out_file, flavour, plug_gaps)
 
 
-def output_combined_statement(statement, out_file, flavour, plug_gaps):
+def output_transactions(transactions, out_file, flavour, plug_gaps):
+    """
+    Write all transactions into the output file according to flavour.
+
+    Plug gaps between transaction balance values if plug gaps is True.
+
+    The function could read first the output file and combine it with the
+    new transactions, plugging the gaps afterwards, but this possibility
+    isn't implemented yet.
+    Currently the output file is overwritten each time.
+    """
 
     # an output file can have a placeholder for the account unique ID
     if "{}" in out_file:
         # all transactions must have the same account UID so we don't care
         # and take the first one
         out_file = out_file.format(
-            next(iter(statement.values()))['transaction_account_uid'])
+            next(iter(transactions.values()))['transaction_account_uid'])
 
     # the extension of the file gives us the file type
     extension = os.path.splitext(out_file)[1].lstrip('.').lower()
@@ -427,15 +458,16 @@ def output_combined_statement(statement, out_file, flavour, plug_gaps):
     with open(flavour_file, mode='r') as yfd:
         flavour_config = yaml.safe_load(yfd)
 
-    # normalize values to a list
-    normalize_fields(flavour_config['fields'])
+    # normalize the valour fields to allow for shortcuts
+    normalize_flavour_fields(flavour_config['fields'])
+    # get the list of output fields
     fields = list(flavour_config['fields'].keys())
 
     if plug_gaps:
-        statement = plug_gaps_in_statement(statement)
+        transactions = plug_gaps_in_statement(transactions)
 
     logging.info("Writing {tr} transactions to output file '{of}'".format(
-        tr=len(statement), of=out_file))
+        tr=len(transactions), of=out_file))
     logging.debug(yaml.dump(flavour_config))
 
     with open(out_file, 'w', newline='') as csvfile:
@@ -447,10 +479,10 @@ def output_combined_statement(statement, out_file, flavour, plug_gaps):
                                     **flavour_config['dialect'])
         if flavour_config.get('header', True):
             writer.writeheader()
-        for uid in statement:
+        for uid in transactions:
             row = {}
             for field in fields:
-                value = get_field_value(field, statement[uid],
+                value = get_field_value(field, transactions[uid],
                                         flavour_config['fields'][field],
                                         flavour_config.get('locale'))
                 row[field] = value
@@ -458,7 +490,13 @@ def output_combined_statement(statement, out_file, flavour, plug_gaps):
             writer.writerow(row)
 
 
-def normalize_fields(fields):
+def normalize_flavour_fields(fields):
+    """
+    Normalize the list of fields in a flavour to allow for "shortcuts".
+
+    None fields are mapped to themself i.e. '$key'
+    And single field values are put into a list
+    """
     for key in fields:
         if fields[key] is None:
             fields[key] = {'value': ['$' + key, '']}
@@ -467,6 +505,12 @@ def normalize_fields(fields):
 
 
 def get_field_value(field, transaction, field_map, locale=None):
+    """
+    Apply the field_map to transaction to extract the expected field
+
+    Returns the extracted field value or a KeyError exception
+    Note that the field parameter is only required for better error message
+    """
     ret_value = None
     for value_map in field_map['value']:
         try:
@@ -510,6 +554,17 @@ def get_locale_currency_code(given_locale=None):
 
 
 def plug_gaps_in_statement(statement):
+    """
+    If two successive transactions in a statement present a gap in the
+    account's balance, add a "gap" transaction to plug it.
+
+    It is assumed that the given statement is a dictionary already sorted by
+    transaction order.
+    The original dictionary of transactions is returned with the found gap
+    transactions added, and sorted again by transaction uid.
+    Note that there will always be a gap transaction if the initial balance
+    before the statement isn't zero.
+    """
     old_balance = old_uid = 0
     gaps = {}
     for uid in statement:
@@ -568,6 +623,7 @@ with multiprocessing.Pool() as pool:
         statements.extend(account_file.values())
     clean_statements = pool.map(clean_account_statement, statements)
 
+# sort the statements by same account in a dictionary
 account_statements = {}
 for statement in clean_statements:
     account_uid = statement['account_uid']
@@ -584,12 +640,12 @@ if len(account_statements) > 1 and '{}' not in args.out:
             of=args.out))
     sys.exit(1)
 
-# there might be more than one account in a file at some banks
+# write now all statements to one output file per account
 with multiprocessing.Pool() as pool:
     statement_parameters = list(
         (statement, args.out, args.flavour_out, args.plug_gaps)
         for statement in account_statements.values())
-    result = pool.starmap_async(output_statement_files, statement_parameters)
+    result = pool.starmap_async(output_account_statements, statement_parameters)
     result.wait()
 if result.successful():
     logging.info("Everything went well, "
