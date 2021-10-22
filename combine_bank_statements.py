@@ -496,12 +496,13 @@ def normalize_flavour_fields(fields):
 
     None fields are mapped to themself i.e. '$key'
     And single field values are put into a list
+    Such shortcuts make the field empty if nothing matches (without error)
     """
     for key in fields:
         if fields[key] is None:
             fields[key] = {'value': ['$' + key, '']}
         if not isinstance(fields[key]['value'], list):
-            fields[key]['value'] = (fields[key]['value'],)
+            fields[key]['value'] = (fields[key]['value'], '')
 
 
 def get_field_value(field, transaction, field_map, locale=None):
