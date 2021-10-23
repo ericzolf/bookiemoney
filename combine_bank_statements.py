@@ -5,9 +5,9 @@ import logging
 import multiprocessing
 import sys
 
-from bookmo import bm_read
+from bookmo import bm_read_csv as bm_read
 from bookmo import bm_clean
-from bookmo import bm_write
+from bookmo import bm_write_csv as bm_write
 
 
 def parse_arguments():
