@@ -30,7 +30,7 @@ fields:  # http://homebank.free.fr/help/misc-csvformat.html
     - $transaction_reference
     - ""
   payee:  # a payee name
-    value: 
+    value:
     - $transaction_counterpart_name
   memo:  # a string
     value:
