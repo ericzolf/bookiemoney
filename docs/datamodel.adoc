@@ -1,0 +1,271 @@
+= Bookiemoney data model
+
+Bookiemoney is mostly based on conventions regarding data handed over from one phase to the next.
+
+NOTE: if I find time, I might create a plug-in concept so that anybody can add input and/or output plug-ins.
+I'm not sure about a clean-up plug-in...
+
+== Data flow
+
+[ditaa, target="data-flow"]
+....
++-------------------+              +----------------------------------+
+| input-filename    |   /------\   |                                  |
+| input-flavourname |-->| read |-->| dictionary of account-statements |
+|                   |   \------/   |                                  |
++-------------------+              +----------------------------------+
+
++-------------------+               +-------------------+
+|                   |   /-------\   |                   |
+| account-statement |-->| clean |-->| account-statement |
+|                   |   \-------/   |                   |
++-------------------+               +-------------------+
+
++----------------------------+
+| list of account-statements |   /-------\
+| output-filename            |-->| write |
+| output-flavourname         |   \-------/
+| plug-gap (True/False)      |
++----------------------------+
+....
+
+== Account statement format
+
+----
+file: .../path/to/file  # the original file from which the statement comes
+flavour: { ... }  # the configuration read from the flavour file
+account_uid: 123456  # a unique ID for the account of the statement
+transactions: [ ... ]  # list of transactions
+account_currency: XXX  # optional, default for the transactions' currency
+account_old_balance_amount: decimal.Decimal(123.45)
+account_new_balance_amount: decimal.Decimal(123.45)
+----
+
+IMPORTANT: either one of the balance amounts is required if the transactions don't contain the balance amount.
+
+The transactions in the list of transactions follows the format described in the <<_transaction_format,next chapter>>.
+
+== Transaction format
+
+A transaction is just a flat dictionary of fields whose name starts with `transaction_`.
+
+NOTE: Other field names are possible, they are generally ignored unless you use them in your own output flavour.
+Unless justified, such fields and flavours won't be accepted in this repo.
+
+The following fields are known and can be used:
+
+.Transaction fields
+[cols="1,1,1,1,4"]
+|===
+|Name|Mandatory Input|Mandatory Clean|Format|Description
+
+| transaction_account_uid
+| False
+| True
+| String
+| A unique ID for the account, preferably overall (e.g. IBAN), at least within a set of bank statements (account number or name).
+It is generally directly copied from the statement.
+
+| transaction_uid
+| False
+| True
+| Sortable (String or Integer)
+| A unique ID for the transaction (unique within an account)
+
+| transaction_date
+| False
+| True
+| datetime.date
+| An immutable date for the transaction; will be copied from the booking date if not provided directly as input, else from the value date
+
+| transaction_booking_date
+| False
+| False
+| datetime.date
+| the date when the transaction appeared in the books, is generally more stable than the value date
+
+| transaction_value_date
+| False
+| False
+| datetime.date
+| the date when the transaction _counts_ in the book, can be more or less in the past and hence can't be considered as stable as the booking date
+
+| transaction_payment_type
+| False
+| False
+| String (choice)
+| The kind of transaction (mapped as describe below)
+
+| transaction_counterpart_name
+| False
+| False
+| String
+| Name of the "other" account, copied from the presenter name if available, else from originator (if amount is positive) or receiver (if amount is negative); it should _not_ be the owner of the account
+
+| transaction_originator_name
+| False
+| False
+| String
+| Originator party of the transaction (possibly the account's owner)
+
+| transaction_receiver_name
+| False
+| False
+| String
+| Receiver party of the transaction (possibly the account's owner)
+
+| transaction_payment_card
+| False
+| False
+| String
+| Name of the payment card used for the transaction
+
+| transaction_reference
+| False
+| False
+| String
+| Some reference of the transaction
+
+| transaction_mandate
+| False
+| False
+| String
+| Some mandate reference
+
+| transaction_presenter_id
+| False
+| False
+| String
+| A unique ID of the presenter of the transaction
+
+| transaction_presenter_name
+| False
+| False
+| String
+| Name of the presenter of the transaction (very similar to the counterpart, but somehow extracted)
+
+| transaction_city
+| False
+| False
+| String
+| Name of the city where the transaction took place
+
+| transaction_country_code
+| False
+| False
+| String (2 letters)
+| Two letters code of the country where the transaction took place
+
+| transaction_details
+| False
+| False
+| String
+| Free text description of the transaction
+
+| transaction_amount
+| True
+| True
+| decimal.Decimal
+| Amount of the transaction
+
+| transaction_currency
+| False
+| True
+| String (3 letters)
+| International currency code of the transaction's amount
+
+| transaction_balance_amount
+| False
+| True
+| decimal.Decimal
+| Balance of the account after the transaction
+
+| transaction_balance_currency
+| False
+| True
+| String (3 letters)
+| International currency code of the transaction's account balance
+
+| transaction_paper_quantity
+| False
+| False
+| Integer
+| Number of papers (stocks, shares, etc) dealt with in the transaction
+
+| transaction_paper_name
+| False
+| False
+| String
+| Name of the paper
+
+| transaction_paper_id
+| False
+| False
+| String
+| ID of the paper (e.g. ISIN or WKN)
+
+| transaction_paper_currency
+| False
+| False
+| String (3 letters)
+| International currency code of the paper's value
+
+| transaction_paper_amount
+| False
+| False
+| decimal.Decimal
+| Amount of papers dealt with in the transaction
+
+| transaction_category
+| False
+| False
+| String
+| (reserved) Hierarchical category, separated by slashes '/' e.g. `expense/car/fuel`
+
+| transaction_tags
+| False
+| False
+| String
+| (reserved) List of tags/labels, separated by spaces ' ' e.g. `tagA tagB`
+
+|===
+
+While cleaning, all the fields (also the non-official ones) are converted from a string depending on their suffix:
+
+_amount:: to a decimal.Decimal using babel.numbers.parse_decimal and the flavour's locale.
+_quantity:: to an integer.
+_currency:: to a 3 letters international currency code, using data from babel.numbers.
+_date:: to a datetime.date using babel.dates.parse_date and the flavour's locale.
+_payment_type:: stays a string but is mapped whenever possible to one of the following values, using the `payment_types` field of the flavour:
+** bank_transfer
+** coupon
+** credit_card
+** debit_card
+** direct_credit
+** direct_debit
+** electronic_payment
+** payout
+** plug_gap (see <<_plug_gap_transaction>>)
+** salary_pension
+** standing_order
+
+=== Transaction UID
+
+The default transaction UID is an integer generated from the booking or transaction date, and a transaction sequence within that date.
+We assume that no transaction is _inserted_ at a later date, only _appended_ (this is why the booking date is used instead of the value date), so that transactions have a stable order within a day.
+The transaction UID is hence of the form `YYYYMMDDSSSS`, where the sequence `S` is multiplied by 10 to allow for later (manual) insertions.
+
+NOTE: if you need more than 999 transactions per day, you're probably rich enough to not need my tool.
+If you're rich enough _and_ need my tool, feel free to sponsor me and I'll add a zero or two.
+
+Plug gap entries have an UID calculated from the following transaction's date minus 1, so that they always end with a `9999` sequence and might have a day of "zero".
+For example, if the transaction after the gap has an UID `202010010010`, the plug gap's ID will be `202001010000 - 1` equal to `202001009999`.
+We again assume that there can't be a gap _within_ a day, only _between_ days.
+
+=== Plug gap transaction
+
+A gap is when one or more transactions are missing between two transactions.
+This is recognized by looking at the balance amounts compared to next transaction amount.
+
+For example, if a transaction `202103110030` has a balance of 1000.00 EUR and is followed by a transaction `202104120010` with a transaction amount of 100.00 EUR and a balance of 2000.00 EUR, there is gap.
+This gap will be plugged with a "plug_gap" transaction of 900.00 EUR and an UID of `2021040119999`.
