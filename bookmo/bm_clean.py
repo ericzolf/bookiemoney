@@ -1,4 +1,7 @@
-#!/usr/bin/python
+"""
+Bookiemoney module to clean an account statement and its transactions
+before writing it down.
+"""
 
 import babel.numbers as babelnum
 import babel.dates as babeldate
@@ -12,11 +15,6 @@ CURRENCY_MAP = {babelnum.get_currency_symbol(x): x
                 for x in babelnum.list_currencies()
                 if x != babelnum.get_currency_symbol(x)}
 
-# maximum possible number of transactions each day
-DAILY_TRANSACTIONS = 10000
-# identifier for accounts without identifier
-NO_ACCOUNT_UID = 'NOIDENTIFIER'
-
 
 def clean_account_statement(account_statement):
     """
@@ -28,6 +26,8 @@ def clean_account_statement(account_statement):
       (see clean_value function)
     * each transaction has a date, the account's UID, a counterpart name,
       an amount, and a balance amount, both with currency
+
+    Returns the cleaned statement
     """
 
     account_file = os.path.basename(account_statement['file'])
@@ -143,6 +143,8 @@ def clean_value(key, value, cfg):
     """
     if key.endswith('_amount'):
         return babelnum.parse_decimal(value, locale=cfg['locale'])
+    elif key.endswith('_quantity'):
+        return int(value)
     elif key.endswith('_currency'):
         return CURRENCY_MAP.get(value, value)
     elif key.endswith('_date'):

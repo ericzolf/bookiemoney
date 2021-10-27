@@ -1,4 +1,6 @@
-#!/usr/bin/python
+"""
+Bookiemoney module to write statements and their transactions to a CSV file
+"""
 
 import csv
 import logging

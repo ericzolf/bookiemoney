@@ -1,4 +1,6 @@
-#!/usr/bin/python
+"""
+Bookiemoney module to read statements and their transactions from an input file
+"""
 
 import csv
 import logging
