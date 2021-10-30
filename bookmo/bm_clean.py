@@ -59,6 +59,9 @@ def clean_account_statement(account_statement):
             account_statement[file_key] = clean_value(
                 file_key, account_statement[file_key], flavour_config)
     for line in account_statement['transactions']:
+        logging.debug(
+            "Cleaning up transaction '{tr}' for account '{ac}'".format(
+                tr=line, ac=account_uid))
         for field in line:
             line[field] = clean_value(field, line[field],
                                       flavour_config)
@@ -141,6 +144,7 @@ def clean_value(key, value, cfg):
 
     Returns the cleaned value
     """
+    logging.debug("Cleaning {ke}={va}".format(ke=key, va=value))
     if key.endswith('_amount'):
         return babelnum.parse_decimal(value, locale=cfg['locale'])
     elif key.endswith('_quantity'):

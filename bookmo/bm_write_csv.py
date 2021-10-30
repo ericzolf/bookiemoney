@@ -16,7 +16,7 @@ def output_account_statements(statements, out_file, flavour, plug_gaps):
     Combine all transactions of multiple statements and write them to a file
     """
     transactions = combine_account_statements(statements)
-    output_transactions(transactions, out_file, flavour, plug_gaps)
+    return output_transactions(transactions, out_file, flavour, plug_gaps)
 
 
 def combine_account_statements(statement):
@@ -85,6 +85,10 @@ def output_transactions(transactions, out_file, flavour, plug_gaps):
     Currently the output file is overwritten each time.
     """
 
+    if not transactions.values():
+        logging.warning("No transactions to write to output file")
+        return None  # nothing to write in a file...
+
     # an output file can have a placeholder for the account unique ID
     if "{}" in out_file:
         # all transactions must have the same account UID so we don't care
@@ -130,6 +134,7 @@ def output_transactions(transactions, out_file, flavour, plug_gaps):
                 row[field] = value
             logging.debug(row)
             writer.writerow(row)
+    return out_file
 
 
 def normalize_flavour_fields(fields):
