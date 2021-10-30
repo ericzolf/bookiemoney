@@ -7,27 +7,8 @@ I'm not sure about a clean-up plug-in...
 
 == Data flow
 
-[ditaa, target="data-flow"]
-....
-+-------------------+              +----------------------------------+
-| input-filename    |   /------\   |                                  |
-| input-flavourname |-->| read |-->| dictionary of account-statements |
-|                   |   \------/   |                                  |
-+-------------------+              +----------------------------------+
-
-+-------------------+               +-------------------+
-|                   |   /-------\   |                   |
-| account-statement |-->| clean |-->| account-statement |
-|                   |   \-------/   |                   |
-+-------------------+               +-------------------+
-
-+----------------------------+
-| list of account-statements |   /-------\
-| output-filename            |-->| write |
-| output-flavourname         |   \-------/
-| plug-gap (True/False)      |
-+----------------------------+
-....
+.Data flow for read, clean and write
+image::datamodel.png[data flow for read clean and write]
 
 == Account statement format
 
