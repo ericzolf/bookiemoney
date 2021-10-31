@@ -4,7 +4,6 @@ import argparse
 import logging
 import multiprocessing
 import sys
-import yaml
 
 from bookmo import bm_read_csv as bm_read
 from bookmo import bm_clean
@@ -74,18 +73,20 @@ logging.debug("Input parameters are '{ip}'".format(ip=input_parameters))
 # read the files, clean them and split them into individual accounts
 with multiprocessing.Pool() as pool:
     if args.serial:
-        accounts = serial_starmap(bm_read.read_statement_file, input_parameters)
+        accounts = serial_starmap(bm_read.read_statement_file,
+                                  input_parameters)
     else:
-        accounts = pool.starmap(bm_read.read_statement_file, input_parameters)
+        accounts = pool.starmap(bm_read.read_statement_file,
+                                input_parameters)
     statements = []
     for account_file in accounts:
         statements.extend(account_file.values())
-    # logging.debug("Cleaning statements '{st}'".format(
-    #     st=yaml.safe_dump(statements)))
     if args.serial:
-        clean_statements = serial_map(bm_clean.clean_account_statement, statements)
+        clean_statements = serial_map(bm_clean.clean_account_statement,
+                                      statements)
     else:
-        clean_statements = pool.map(bm_clean.clean_account_statement, statements)
+        clean_statements = pool.map(bm_clean.clean_account_statement,
+                                    statements)
 
 # sort the statements by same account in a dictionary
 account_statements = {}

@@ -59,61 +59,83 @@ def clean_account_statement(account_statement):
             account_statement[file_key] = clean_value(
                 file_key, account_statement[file_key], flavour_config)
     for line in account_statement['transactions']:
-        logging.debug(
-            "Cleaning up transaction '{tr}' for account '{ac}'".format(
-                tr=line, ac=account_uid))
-        for field in line:
-            line[field] = clean_value(field, line[field],
-                                      flavour_config)
-        line['transaction_account_uid'] = account_uid
-        # it would be nicer to have it configurable but I couldn't find
-        # a simple way to express it
-        # basically, some banks/tools only consider a counterpart and
-        # don't document between account owner and counterpart,
-        # who is the originator resp. the receiver
-        if 'transaction_counterpart_name' not in line:
-            if ('transaction_originator_name' in line
-                    and 'transaction_receiver_name' in line):
-                if line['transaction_amount'] > 0:
-                    line['transaction_counterpart_name'] = line[
-                        'transaction_originator_name']
-                else:
-                    line['transaction_counterpart_name'] = line[
-                        'transaction_receiver_name']
-            elif 'transaction_presenter_name' in line:
-                line['transaction_counterpart_name'] = line[
-                    'transaction_presenter_name']
-            elif 'transaction_receiver_name' in line:
-                line['transaction_counterpart_name'] = line[
-                    'transaction_receiver_name']
-            elif 'transaction_originator_name' in line:
+        clean_transaction(line, flavour_config, account_uid, default_currency)
+
+    add_transaction_balance_amount(
+        account_statement['transactions'],
+        account_statement.get('account_new_balance_amount'),
+        account_statement.get('account_old_balance_amount')
+    )
+
+    return account_statement
+
+
+def clean_transaction(line, flavour_config, account_uid, default_currency):
+    """
+    Clean a transaction according to flavour
+
+    Make sure:
+    * the transaction is linked to an account through its UID,
+    * a counterpart name is identified
+    * currencies for amount and balance are set
+    * there is a date (or fail!)
+    """
+    logging.debug(
+        "Cleaning up transaction '{tr}' for account '{ac}'".format(
+            tr=line, ac=account_uid))
+    for field in line:
+        line[field] = clean_value(field, line[field],
+                                  flavour_config)
+    line['transaction_account_uid'] = account_uid
+    # it would be nicer to have it configurable but I couldn't find
+    # a simple way to express it
+    # basically, some banks/tools only consider a counterpart and
+    # don't document between account owner and counterpart,
+    # who is the originator resp. the receiver
+    if 'transaction_counterpart_name' not in line:
+        if ('transaction_originator_name' in line
+                and 'transaction_receiver_name' in line):
+            if line['transaction_amount'] > 0:
                 line['transaction_counterpart_name'] = line[
                     'transaction_originator_name']
-        if 'transaction_currency' not in line:
-            line['transaction_currency'] = default_currency
-        if 'transaction_balance_currency' not in line:
-            line['transaction_balance_currency'] = default_currency
+            else:
+                line['transaction_counterpart_name'] = line[
+                    'transaction_receiver_name']
+        else:
+            counterpart = line.get(
+                'transaction_presenter_name',
+                line.get('transaction_receiver_name',
+                         line.get('transaction_originator_name')))
+            if counterpart is not None:
+                line['transaction_counterpart_name'] = counterpart
 
-        # same principle, not all banks make the difference between
-        # booking and value dates. We need a value which doesn't jump and
-        # it is the booking date because the value date might be in the past.
-        if 'transaction_date' not in line:
-            if 'transaction_booking_date' in line:
-                line['transaction_date'] = line[
-                    'transaction_booking_date']
-            else:  # it's better to fail here so we don't check
-                line['transaction_date'] = line[
-                    'transaction_value_date']
+    if 'transaction_currency' not in line:
+        line['transaction_currency'] = default_currency
+    if 'transaction_balance_currency' not in line:
+        line['transaction_balance_currency'] = default_currency
 
+    # same principle, not all banks make the difference between
+    # booking and value dates. We need a value which doesn't jump and
+    # it is the booking date because the value date might be in the past.
+    if 'transaction_date' not in line:
+        if 'transaction_booking_date' in line:
+            line['transaction_date'] = line['transaction_booking_date']
+        else:  # it's better to fail here so we don't check
+            line['transaction_date'] = line['transaction_value_date']
+
+
+def add_transaction_balance_amount(transactions,
+                                   new_balance=None, old_balance=None):
+    """
+    Add balance amount to all transactions based on old or new account balance
+    """
     # the new account balance value is the balance value of the last
     # transaction in the file
-    if ('transaction_balance_amount'
-            not in account_statement['transactions'][-1]
-            and 'account_new_balance_amount' in account_statement):
-        oldline = account_statement['transactions'][-1]
-        oldline['transaction_balance_amount'] = account_statement[
-            'account_new_balance_amount']
-        for line in account_statement['transactions'][-2::-1]:
+    if ('transaction_balance_amount' not in transactions[-1]
+            and new_balance is not None):
+        oldline = transactions[-1]
+        oldline['transaction_balance_amount'] = new_balance
+        for line in transactions[-2::-1]:
             if 'transaction_balance_amount' not in line:
                 line['transaction_balance_amount'] = (
                         oldline['transaction_balance_amount']
@@ -121,21 +143,17 @@ def clean_account_statement(account_statement):
             oldline = line
     # the old account balance value is the balance value _before_
     # the first transaction in the file
-    elif ('transaction_balance_amount'
-            not in account_statement['transactions'][0]
-            and 'account_old_balance_amount' in account_statement):
-        oldline = account_statement['transactions'][0]
+    elif ('transaction_balance_amount' not in transactions[0]
+            and old_balance is not None):
+        oldline = transactions[0]
         oldline['transaction_balance_amount'] = (
-                account_statement['account_old_balance_amount']
-                + oldline['transaction_amount'])
-        for line in account_statement['transactions'][1:]:
+                old_balance + oldline['transaction_amount'])
+        for line in transactions[1:]:
             if 'transaction_balance_amount' not in line:
                 line['transaction_balance_amount'] = (
                         oldline['transaction_balance_amount']
                         + line['transaction_amount'])
             oldline = line
-
-    return account_statement
 
 
 def clean_value(key, value, cfg):
