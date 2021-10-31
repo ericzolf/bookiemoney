@@ -19,7 +19,7 @@ lines:
   pattern: ";"
 
 - type: match
-  pattern: '"Umsätze (?P<account_name>Giro.*) ?";"Zeitraum: .*";'
+  pattern: '"Umsätze (?P<account_name>Giro.*?) ?";"Zeitraum: .*";'
 - type: match
   pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
 - type: csv
@@ -53,7 +53,7 @@ lines:
   pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
-  pattern: '"Umsätze (?P<account_name>Visa.*) ?";"Zeitraum: .*";'
+  pattern: '"Umsätze (?P<account_name>Visa.*?) ?";"Zeitraum: .*";'
 - type: match
   pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
 - type: csv
@@ -90,7 +90,7 @@ lines:
   pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
-  pattern: '"Umsätze (?P<account_name>Tagesgeld.*) ?";"Zeitraum: .*";'
+  pattern: '"Umsätze (?P<account_name>Tagesgeld.*?) ?";"Zeitraum: .*";'
 - type: match
   pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
 - type: csv
@@ -121,7 +121,7 @@ lines:
   pattern: '"Alter Kontostand";"(?P<account_old_balance_amount>.*) (?P<account_currency>...)";|"Keine Umsätze vorhanden.";'
 
 - type: match
-  pattern: '"Umsätze (?P<account_name>Depot.*) ?";"Zeitraum: .*";'
+  pattern: '"Umsätze (?P<account_name>Depot.*?) ?";"Zeitraum: .*";'
 - type: match
   pattern: '"Neuer Kontostand";"(?P<account_new_balance_amount>.*) (?P<account_currency>...)";'
 - type: csv
