@@ -33,6 +33,9 @@ lines:
     skipinitialspace: true
     strict: true
   reverse: true  # entries are sorted older dates last
+  ignore:
+    key: Buchungstag
+    value: offen
   map:
   - key: Buchungstag
     pattern: "(?P<transaction_booking_date>.*)"

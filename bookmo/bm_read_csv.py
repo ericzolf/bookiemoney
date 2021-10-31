@@ -151,6 +151,10 @@ def parse_csv(lr, cfg):
             # the line didn't parse correctly, end of the csv...
             lr.step_back()
             break
+        elif ('ignore' in cfg
+                and row[cfg['ignore']['key']] == cfg['ignore']['value']):
+            logging.warning("Ignoring transaction '{tr}'".format(tr=row))
+            continue
         else:
             if 'map' in cfg:
                 row |= map_fields(row, cfg['map'])
