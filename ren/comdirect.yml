@@ -1,0 +1,9 @@
+---
+name: Comdirect
+renames:
+  - from: '(?P<head>Finanzreport.*)_per_(?P<d>[0-3][0-9])\.(?P<m>[01][0-9])\.(?P<y>[12][09][0-9][0-9])(?P<tail>.*.pdf)'
+    to:   '{y}-{m}-{d}_{head}_{tail}'
+  - from: '(?P<head>umsaetze_.*)_(?P<y>[12][09][0-9][0-9])(?P<m>[01][0-9])(?P<d>[0-3][0-9])-(?P<tail>.*)'
+    to:   '{y}-{m}-{d}_{head}_{tail}'
+  - from: '(?P<head>Jahres.*)_(?P<y>[12][09][0-9][0-9])(?P<tail>.*)'
+    to:   '{y}_{head}_{tail}'

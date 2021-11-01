@@ -1,0 +1,5 @@
+---
+name: La Banque Postale
+renames:
+  - from: '(?P<head>[0-9A-Z]{11})(?P<epoch>[0-9]+)(?P<milli>[0-9]{3})(?P<tail>\.[a-z][a-z][a-z])'
+    to: '{epoch.year}-{epoch.month:02d}-{epoch.day:02d}_{epoch.hour:02d}-{epoch.minute:02d}-{epoch.second:02d}-{milli}_{head}{tail}'
