@@ -18,23 +18,23 @@ identifier: account_id
 
 lines:
 - type: match
-  pattern: "Kontoumsätze (?P<account_type>.*);+"
+  pattern: "Kontoumsätze (?P<account_type>.*);{6}"
 - type: match
-  pattern: ";+"
+  pattern: ";{6}"
 - type: match
-  pattern: "Kontoinhaber:;(?P<account_owner>.*);+"
+  pattern: "Kontoinhaber:;(?P<account_owner>.*);{5}"
 - type: match
-  pattern: "IBAN:;(?P<account_id>.*);+"
+  pattern: "IBAN:;(?P<account_id>.*);{5}"
 - type: match
-  pattern: ";+"
+  pattern: ";{6}"
 - type: match
   pattern: "Umsätze ab;Enddatum;IBAN;Saldo;Währung;;"
 - type: match
-  pattern: "(?P<statement_begin_date>.*);(?P<statement_end_date>.*);.*;(?P<account_new_balance_amount>.*);(?P<account_currency>.);;"
+  pattern: "(?P<statement_begin_date>.*);(?P<statement_end_date>.*);.*;(?P<account_new_balance_amount>.*);(?P<account_currency>.*);;"
 - type: match
   pattern: "Weitere gewählte Suchoptionen:.*"
 - type: match
-  pattern: ";+"
+  pattern: ";{6}"
 - type: csv
   dialect:
     delimiter: ";"
