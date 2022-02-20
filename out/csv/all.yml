@@ -11,6 +11,7 @@ fields:
   transaction_booking_date:
   transaction_value_date:
   transaction_payment_type:
+  transaction_counterpart_id:
   transaction_counterpart_name:
   transaction_originator_name:
   transaction_receiver_name:
@@ -31,3 +32,5 @@ fields:
   transaction_paper_id:
   transaction_paper_currency:
   transaction_paper_amount:
+  transaction_interest_amount:
+  transaction_repayment_amount:

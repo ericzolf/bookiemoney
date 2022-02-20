@@ -1,5 +1,5 @@
 ---
-name: sparda
+name: sparda TEO
 encoding: utf8
 locale: de
 type: csv
@@ -30,6 +30,7 @@ lines:
 - type: match
   pattern: "Umsätze ab;Enddatum;IBAN;Saldo;Währung;;"
 - type: match
+  # requires https://github.com/python-babel/babel/pull/842 to support ISO dates
   pattern: "(?P<statement_begin_date>.*);(?P<statement_end_date>.*);.*;(?P<account_new_balance_amount>.*);(?P<account_currency>.*);;"
 - type: match
   pattern: "Weitere gewählte Suchoptionen:.*"
@@ -57,7 +58,7 @@ lines:
     pattern: "(?P<transaction_counterpart_name>.*)"
   - key: Verwendungszweck
     pattern:
-      - "IBAN .*Zins +(?P<transaction_interest_amount>[0-9,]) Tilg (?P<transaction_repayment_amount>[0-9,])"
+      - "IBAN .*Zins +(?P<transaction_interest_amount>[-+0-9.,]+) Tilg (?P<transaction_repayment_amount>[-+0-9.,]+)"
       - "(?P<transaction_details>.*)"
   - key: Umsatz
     pattern: "(?P<transaction_amount>.*)"
