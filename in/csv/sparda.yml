@@ -1,0 +1,66 @@
+---
+name: sparda
+encoding: utf8
+locale: de
+type: csv
+payment_types:
+# somewhat aligned with http://homebank.free.fr/help/00-lexicon.html#payment
+  Auszahlung: payout
+  Dauerauftrag: standing_order
+  Gehalt/Rente: salary_pension
+  Gutschrift: direct_credit
+  Kartenzahlung: debit_card
+  Lastschrift: direct_debit
+  "Überweisung": bank_transfer
+  "Überweisung giropay": electronic_payment
+identifier: account_id
+#currency: EUR  # only necessary if it can't be read from each statement file
+
+lines:
+- type: match
+  pattern: "Kontoumsätze (?P<account_type>.*);+"
+- type: match
+  pattern: ";+"
+- type: match
+  pattern: "Kontoinhaber:;(?P<account_owner>.*);+"
+- type: match
+  pattern: "IBAN:;(?P<account_id>.*);+"
+- type: match
+  pattern: ";+"
+- type: match
+  pattern: "Umsätze ab;Enddatum;IBAN;Saldo;Währung;;"
+- type: match
+  pattern: "(?P<statement_begin_date>.*);(?P<statement_end_date>.*);.*;(?P<account_new_balance_amount>.*);(?P<account_currency>.);;"
+- type: match
+  pattern: "Weitere gewählte Suchoptionen:.*"
+- type: match
+  pattern: ";+"
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 0  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: Wertstellungstag
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: GegenIBAN
+    pattern: "(?P<transaction_counterpart_id>.*)"
+  - key: Name Gegenkonto
+    pattern: "(?P<transaction_counterpart_name>.*)"
+  - key: Verwendungszweck
+    pattern:
+      - "IBAN .*Zins +(?P<transaction_interest_amount>[0-9,]) Tilg (?P<transaction_repayment_amount>[0-9,])"
+      - "(?P<transaction_details>.*)"
+  - key: Umsatz
+    pattern: "(?P<transaction_amount>.*)"
+  - key: Währung
+    pattern: "(?P<transaction_currency>.*)"
+...
