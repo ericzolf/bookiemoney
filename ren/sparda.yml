@@ -3,5 +3,5 @@ name: SpardaBank (LEO)
 renames:
   - from: '(?P<head>[A-Z_]*)-(?P<y>[12][09][0-9][0-9])-(?P<m>[01][0-9])-(?P<d>[0-3][0-9]).pdf'
     to:   '{y}-{m}-{d}_{head}.pdf'
-  - from: '(?P<y>[12][09][0-9][0-9])(?P<m>[01][0-9])(?P<d>[0-3][0-9])_(?P<head>Umsätze_.*?)_?.csv'
-    to:   '{y}-{m}-{d}_{head}.csv'
+  - from: '(?P<y>[12][09][0-9][0-9])(?P<m>[01]?[0-9])(?P<d>[0-3]?[0-9])_(?P<head>Umsätze_.*?)_?.csv'
+    to:   '{y}-{m:0>2}-{d:0>2}_{head}.csv'
