@@ -6,6 +6,7 @@ type: csv
 payment_types:
 # somewhat aligned with http://homebank.free.fr/help/00-lexicon.html#payment
   Auszahlung GAA: payout
+  Buchung aus Umsatzreklamation: RECLAMATION
   Kupon: coupon
   Lastschrift / Belastung: direct_debit
   Übertrag / Überweisung: bank_transfer
