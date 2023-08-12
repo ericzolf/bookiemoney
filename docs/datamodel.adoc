@@ -77,11 +77,23 @@ It is generally directly copied from the statement.
 | String (choice)
 | The kind of transaction (mapped as describe below)
 
+| transaction_counterpart_id
+| False
+| False
+| String
+| ID of the "other" account, generally the IBAN of the counterpart's account
+
 | transaction_counterpart_name
 | False
 | False
 | String
 | Name of the "other" account, copied from the presenter name if available, else from originator (if amount is positive) or receiver (if amount is negative); it should _not_ be the owner of the account
+
+| transaction_creditor_id
+| False
+| False
+| String
+| SEPA Direct Debit Creditor Identifier ("Gläubiger-ID" in German)
 
 | transaction_originator_name
 | False

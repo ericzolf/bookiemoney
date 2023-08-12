@@ -1,0 +1,87 @@
+---
+name: postbank2023
+encoding: utf8
+locale: de
+type: csv
+payment_types:
+# somewhat aligned with http://homebank.free.fr/help/00-lexicon.html#payment
+  Auszahlung: payout
+  Bargeldauszahlung (Geldautomat): payout
+  Bargeldauszahlung (Kasse): payout
+  Gutschrift: direct_credit
+  Kartenzahlung: debit_card
+  paydirekt Zahlung: electronic_payment
+  SEPA Lastschrift: direct_debit
+  SEPA Lastschrift (ELV): debit_card  # Elektronisches Lastschriftverfahren
+  SEPA Überweisung: bank_transfer
+  SEPA Überweisung (Dauerauftrag): standing_order
+  SEPA Überweisung (Lohn, Gehalt, Rente): salary_pension
+  Sonstige: other
+
+identifier: account_id
+#currency: EUR  # only necessary if it can't be read from each statement file
+
+lines:
+- type: match
+  pattern: ".*Umsätze"  # to skip the BOM
+- type: match
+  pattern: "Konto;Filial-/Kontonummer;IBAN;Währung"
+- type: match
+  pattern: "(?P<account_name>.*);(?P<account_national_id>.*);(?P<account_id>.*);(?P<account_currency>.{3})"
+- type: match
+  pattern: ""
+- type: match
+  pattern: "(?P<statement_begin_date>[1-3]?[0-9]\\.1?[0-9]\\.[0-9]{4}) - (?P<statement_end_date>[1-3]?[0-9]\\.1?[0-9]\\.[0-9]{4})"
+- type: match
+  pattern: "Letzter Kontostand;;;;(?P<account_old_balance_amount>.*);(?P<account_currency>[A-Z]{3})"
+- type: match
+  pattern: "Vorgemerkte und noch nicht gebuchte Umsätze sind nicht Bestandteil dieser Übersicht."
+- type: csv
+  dialect:
+    delimiter: ";"
+    doublequote: false
+    escapechar: null  # None
+    lineterminator: "\n"
+    quotechar: '"'
+    quoting: 3  # 0=minimal, 1=all, 2=nonnumeric, 3=none
+    skipinitialspace: true
+    strict: true
+  reverse: true  # entries are sorted older dates last
+  map:
+  - key: Buchungstag
+    pattern: "(?P<transaction_booking_date>.*)"
+  - key: Wert
+    pattern: "(?P<transaction_value_date>.*)"
+  - key: Umsatzart
+    pattern: "(?P<transaction_payment_type>.*)"
+  - key: "Begünstigter / Auftraggeber"
+    pattern: "(?P<transaction_payment_card>V PAY|Lastschrift aus Kartenzahlung)"
+    then:
+    - key: Verwendungszweck
+      pattern: "(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..) *(?P<transaction_details>.*)"
+    else:
+    - key: "Begünstigter / Auftraggeber"
+      pattern:
+      - "DANKE, SAGT (?P<transaction_counterpart_name>.*)"
+      - "(?P<transaction_counterpart_name>.*) SAGT DANKE.*"
+      - "(?P<transaction_counterpart_name>.*) DANKT FUER.*"
+      - "(?P<transaction_counterpart_name>.*)"
+    - key: Verwendungszweck
+      pattern:
+      - "(?P<transaction_presenter_name>.*)//(?P<transaction_city>.*)/(?P<transaction_country_code>..) *(?P<transaction_details>.*)"
+      - "(?P<transaction_details>.*)"
+  - key: "IBAN / Kontonummer"  # older versions have only IBAN, edit accordingly
+    pattern: "(?P<transaction_counterpart_id>.*)"
+  - key: Kundenreferenz
+    pattern: "(?P<transaction_reference>.*)"
+  - key: Mandatsreferenz
+    pattern: "(?P<transaction_mandate>.*)"
+  - key: "Gläubiger ID"
+    pattern: "(?P<transaction_creditor_id>.*)"
+  - key: Betrag
+    pattern: "(?P<transaction_amount>.*)"
+  - key: Währung
+    pattern: "(?P<transaction_currency>.{1,3})"
+- type: match
+  pattern: "Kontostand;(?P<statement_date>[1-3]?[0-9]\\.1?[0-9]\\.[0-9]{4});;;(?P<account_new_balance_amount>.*);(?P<account_currency>[A-Z]{3})"
+...

@@ -13,6 +13,7 @@ fields:
   transaction_payment_type:
   transaction_counterpart_id:
   transaction_counterpart_name:
+  transaction_creditor_id:
   transaction_originator_name:
   transaction_receiver_name:
   transaction_payment_card:
