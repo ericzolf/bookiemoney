@@ -7,3 +7,8 @@ renames:
     to: '{y}-{m}-{d}_{head}_{tail}'
   - from: '(?P<head>(Konto|Mitteilungen)_.*)_(?P<y>[12][09][0-9][0-9])-(?P<m>[01][0-9])-(?P<d>[0-3][0-9])_(?P<tail>PB.*)'
     to: '{y}-{m}-{d}_{head}_{tail}'
+  # new formats after migration
+  - from: '(?P<head>(Abrechnung|Kontoauszug|Kundenreporting|Serienbrief)_.*)_(?P<y>[12][09][0-9][0-9])-(?P<m>[01][0-9])-(?P<d>[0-3][0-9])_(?P<tail>.*)'
+    to: '{y}-{m}-{d}_{head}_{tail}'
+  - from: '(?P<head>Kontoumsaetze_.*)_(?P<y>[12][09][0-9][0-9])(?P<m>[01][0-9])(?P<d>[0-3][0-9])_(?P<tail>[0-9]{6}.*)'
+    to: '{y}-{m}-{d}_{head}_{tail}'
