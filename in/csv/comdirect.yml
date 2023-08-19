@@ -10,9 +10,12 @@ payment_types:
   Kupon: coupon
   Lastschrift / Belastung: direct_debit
   Übertrag / Überweisung: bank_transfer
+  Kontoübertrag: bank_transfer_internal
   Visa-Umsatz: credit_card
   Visa-Kartenabrechnung: bank_transfer
   Gutschrift: direct_credit
+  Kontoführungsentgelt: account_fee
+  Kontoabschluss: financial_institution_fee
 identifier: account_name
 
 lines:
