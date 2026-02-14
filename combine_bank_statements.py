@@ -55,79 +55,81 @@ def serial_map(function, params):
 
 # MAIN
 
-args = parse_arguments()
+if __name__ == "__main__":
 
-# setup the logging
-if args.loglevel:
-    num_loglevel = getattr(logging, args.loglevel.upper(), None)
-    if args.logfile:
-        logging.basicConfig(filename=args.logfile, level=num_loglevel)
-    else:
-        logging.basicConfig(level=num_loglevel)
+    args = parse_arguments()
 
-# create a list of input_parameters we can use with pool.starmap
-input_parameters = list((x, args.flavour_in) for x in args.inputs)
+    # setup the logging
+    if args.loglevel:
+        num_loglevel = getattr(logging, args.loglevel.upper(), None)
+        if args.logfile:
+            logging.basicConfig(filename=args.logfile, level=num_loglevel)
+        else:
+            logging.basicConfig(level=num_loglevel)
 
-logging.debug("Input parameters are '{ip}'".format(ip=input_parameters))
+    # create a list of input_parameters we can use with pool.starmap
+    input_parameters = list((x, args.flavour_in) for x in args.inputs)
 
-# read the files, clean them and split them into individual accounts
-with multiprocessing.Pool() as pool:
-    if args.serial:
-        accounts = serial_starmap(bm_read.read_statement_file,
-                                  input_parameters)
-    else:
-        accounts = pool.starmap(bm_read.read_statement_file,
-                                input_parameters)
-    statements = []
-    for account_file in accounts:
-        statements.extend(account_file.values())
-    if args.serial:
-        clean_statements = serial_map(bm_clean.clean_account_statement,
-                                      statements)
-    else:
-        clean_statements = pool.map(bm_clean.clean_account_statement,
-                                    statements)
+    logging.debug("Input parameters are '{ip}'".format(ip=input_parameters))
 
-# sort the statements by same account in a dictionary
-account_statements = {}
-for statement in clean_statements:
-    account_uid = statement['account_uid']
-    if account_uid in account_statements:
-        account_statements[account_uid].append(statement)
-    else:
-        account_statements[account_uid] = [statement, ]
+    # read the files, clean them and split them into individual accounts
+    with multiprocessing.Pool() as pool:
+        if args.serial:
+            accounts = serial_starmap(bm_read.read_statement_file,
+                                      input_parameters)
+        else:
+            accounts = pool.starmap(bm_read.read_statement_file,
+                                    input_parameters)
+        statements = []
+        for account_file in accounts:
+            statements.extend(account_file.values())
+        if args.serial:
+            clean_statements = serial_map(bm_clean.clean_account_statement,
+                                          statements)
+        else:
+            clean_statements = pool.map(bm_clean.clean_account_statement,
+                                        statements)
 
-# make sure we detect if output files could get overwritten
-if len(account_statements) > 1 and '{}' not in args.out:
-    logging.critical(
-        "Out file {of} doesn't contain {{}}. That would mean overwriting some "
-        "output as there is more than one account in the input files".format(
-            of=args.out))
-    sys.exit(1)
+    # sort the statements by same account in a dictionary
+    account_statements = {}
+    for statement in clean_statements:
+        account_uid = statement['account_uid']
+        if account_uid in account_statements:
+            account_statements[account_uid].append(statement)
+        else:
+            account_statements[account_uid] = [statement, ]
 
-# write now all statements to one output file per account
-with multiprocessing.Pool() as pool:
-    statement_parameters = list(
-        (statement, args.out, args.flavour_out, args.plug_gaps)
-        for statement in account_statements.values())
-    if args.serial:
-        result = serial_starmap(bm_write.output_account_statements,
-                                statement_parameters)
-    else:
-        result = pool.starmap_async(bm_write.output_account_statements,
+    # make sure we detect if output files could get overwritten
+    if len(account_statements) > 1 and '{}' not in args.out:
+        logging.critical(
+            "Out file {of} doesn't contain {{}}. That would mean overwriting some "
+            "output as there is more than one account in the input files".format(
+                of=args.out))
+        sys.exit(1)
+
+    # write now all statements to one output file per account
+    with multiprocessing.Pool() as pool:
+        statement_parameters = list(
+            (statement, args.out, args.flavour_out, args.plug_gaps)
+            for statement in account_statements.values())
+        if args.serial:
+            result = serial_starmap(bm_write.output_account_statements,
                                     statement_parameters)
-        result.wait()
+        else:
+            result = pool.starmap_async(bm_write.output_account_statements,
+                                        statement_parameters)
+            result.wait()
 
-# in serial mode, we fail immediately so no need to differentiate
-if args.serial or result.successful():
-    if not args.serial:
-        result = result.get()
-    logging.debug("Transactions written to files '{fi}'".format(fi=result))
-    logging.info("Everything went well, "
-                 "{cs} combined statement file(s) written".format(
-                     cs=len(result)-result.count(None)))
-    sys.exit(0)
-else:
-    logging.error("Something went wrong, check previous errors "
-                  "and result '{rs}".format(rs=result.get()))
-    sys.exit(1)
+    # in serial mode, we fail immediately so no need to differentiate
+    if args.serial or result.successful():
+        if not args.serial:
+            result = result.get()
+        logging.debug("Transactions written to files '{fi}'".format(fi=result))
+        logging.info("Everything went well, "
+                     "{cs} combined statement file(s) written".format(
+                         cs=len(result)-result.count(None)))
+        sys.exit(0)
+    else:
+        logging.error("Something went wrong, check previous errors "
+                      "and result '{rs}".format(rs=result.get()))
+        sys.exit(1)
