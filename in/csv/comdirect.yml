@@ -152,7 +152,7 @@ lines:
     pattern: "(?P<transaction_paper_id>.*)"
   - key: Währung
     pattern: "(?P<transaction_paper_currency>.*)"
-  - key: "Ausführungs-<br/>kurs"
+  - key: "Ausführungskurs"
     pattern: "(?P<transaction_paper_amount>.*)"
   - key: Umsatz in EUR
     pattern: "(?P<transaction_amount>.*)"
